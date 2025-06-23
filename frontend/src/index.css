@@ -1,1 +1,22 @@
+@font-face{
+    font-family: Inter;
+    src:url("../src/assets/fonts/Inter-VariableFont_opsz\,wght.ttf")
+}
+
 @import "tailwindcss";
+
+@theme{
+    --font-inter: Inter, "sans-serif";
+    --color-lavender: #E6E6FA;
+    --color-lilac: #C9B6E4;
+    --color-plum: #6C5B7B;
+    --color-light-white: #FDFDFD;
+    --color-light-black: #000000;
+
+    --color-dark-bg1: #121212;
+    --color-dark-bg2: #181818;
+    --color-dark-bg3: #282828;
+    --color-dark-bg4: #404040;
+    --color-dark-white: #FFFFFF;
+    --color-dark-gray: #B3B3B3;
+}

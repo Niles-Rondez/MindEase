@@ -1,7 +1,14 @@
+import Login from "./pages/Login"
+import Signup from "./pages/Signup"
+import PersonalInfo from "./pages/PersonalInfo"
+
+
 function App() {
   return (
     <>
-      <div className="text-2xl">Hello</div>
+      <Login/>
+      <Signup/>
+      <PersonalInfo/>
     </>
   )
 }
