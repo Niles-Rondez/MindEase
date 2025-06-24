@@ -1,6 +1,17 @@
-function Button({text}){
+function Button({ text, type = "button", disabled = false, onClick }){
     return(
-        <button className="font-inter font-bold text-xl bg-lilac text-white py-3 px-10 rounded-xl hover:bg-plum cursor-pointer w-full transition-colors">{text}</button>
+        <button 
+            type={type}
+            disabled={disabled}
+            onClick={onClick}
+            className={`font-inter font-bold text-xl py-3 px-10 rounded-xl cursor-pointer w-full transition-colors ${
+                disabled 
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                    : 'bg-lilac text-white hover:bg-plum'
+            }`}
+        >
+            {text}
+        </button>
     );
 }
 
