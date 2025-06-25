@@ -93,11 +93,16 @@
 
 
 import PersonalInfo from "./pages/PersonalInfo";
+import IndoorHobbies from "./pages/IndoorHobbies";
+import OutdoorHobbbies from "./pages/OutdoorHobbies";
+import OtherHobbies from "./pages/OtherHobbies";
 
 export default function App() {
   return (
     <>
-    <PersonalInfo />
+      <IndoorHobbies/>
+      <OutdoorHobbbies/>
+      <OtherHobbies/>
     </>
   );
 }
