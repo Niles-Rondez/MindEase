@@ -95,7 +95,7 @@ function OtherHobbies(){
 
                             {/* Navigation */}
                             <div className='flex items-center justify-between pt-4 mt-6 border-t border-gray-100'>
-                                <button className="font-medium text-gray-600 transition-colors hover:text-plum">
+                                <button className="px-6 py-3 text-lg font-medium text-gray-600 transition-all duration-200 rounded-xl hover:text-plum hover:bg-gray-100">
                                     Skip
                                 </button>
                                 <div className="flex items-center space-x-4">
@@ -168,7 +168,7 @@ function OtherHobbies(){
 
                     {/* Navigation */}
                     <div className='flex items-center justify-between pt-4 mt-6 border-t border-gray-100'>
-                        <button className="font-medium text-gray-600 transition-colors hover:text-plum">
+                        <button className="px-6 py-3 text-lg font-medium text-gray-600 transition-all duration-200 rounded-xl hover:text-plum hover:bg-gray-100">
                             Skip
                         </button>
                         <div className="flex items-center space-x-4">

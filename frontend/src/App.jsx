@@ -92,17 +92,20 @@
 // }
 
 
+import ActivityLevels from "./pages/ActivityLevels";
 import PersonalInfo from "./pages/PersonalInfo";
 import IndoorHobbies from "./pages/IndoorHobbies";
-import OutdoorHobbbies from "./pages/OutdoorHobbies";
+import OutdoorHobbies from "./pages/OutdoorHobbies";
 import OtherHobbies from "./pages/OtherHobbies";
 
 export default function App() {
   return (
     <>
-      <IndoorHobbies/>
-      <OutdoorHobbbies/>
-      <OtherHobbies/>
+      <PersonalInfo />
+      <IndoorHobbies />
+      <OutdoorHobbies />
+      <OtherHobbies />
+      <ActivityLevels />
     </>
   );
 }
