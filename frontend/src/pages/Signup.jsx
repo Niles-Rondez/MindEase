@@ -12,13 +12,11 @@ function Signup({ onSwitchToLogin }){
     const [confirmPassword, setConfirmPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [message, setMessage] = useState('')
 
     const handleSignup = async (e) => {
         e.preventDefault()
         setLoading(true)
         setError('')
-        setMessage('')
 
         // Check if passwords match
         if (password !== confirmPassword) {
@@ -38,15 +36,21 @@ function Signup({ onSwitchToLogin }){
             const { data, error } = await supabase.auth.signUp({
                 email: email,
                 password: password,
+                options: {
+                    emailRedirectTo: undefined // Disable email confirmation
+                }
             })
 
             if (error) {
                 setError(error.message)
             } else {
-                setMessage('Check your email for the confirmation link!')
+                // Since email confirmation is disabled, user should be automatically signed in
+                // The auth state change will be handled by the parent App component
+                console.log('User signed up successfully:', data)
             }
         } catch (error) {
             setError('An unexpected error occurred')
+            console.error('Signup error:', error)
         } finally {
             setLoading(false)
         }
@@ -75,11 +79,6 @@ function Signup({ onSwitchToLogin }){
                             {error && (
                                 <div className="p-3 text-sm text-red-600 border border-red-200 rounded-lg bg-red-50">
                                     {error}
-                                </div>
-                            )}
-                            {message && (
-                                <div className="p-3 text-sm text-green-600 border border-green-200 rounded-lg bg-green-50">
-                                    {message}
                                 </div>
                             )}
                             <Input 
@@ -140,11 +139,6 @@ function Signup({ onSwitchToLogin }){
                         {error && (
                             <div className="p-3 text-sm text-red-600 border border-red-200 rounded-lg bg-red-50">
                                 {error}
-                            </div>
-                        )}
-                        {message && (
-                            <div className="p-3 text-sm text-green-600 border border-green-200 rounded-lg bg-green-50">
-                                {message}
                             </div>
                         )}
                         <Input 
