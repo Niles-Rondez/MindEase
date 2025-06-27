@@ -5,7 +5,7 @@ import ProgressBar from "../components/ProgressBar"
 import GenderSlider from "../components/GenderSlider"
 import Dropdown from "../components/Dropdown"
 
-function PersonalInfo(){
+function PersonalInfo({ onContinue, onSkip }){
     const [selectedGender, setSelectedGender] = useState('');
     const [genderIdentity, setGenderIdentity] = useState('');
     const [name, setName] = useState('');
@@ -17,6 +17,20 @@ function PersonalInfo(){
         'Man', 'Woman', 'Non-binary', 'Genderfluid', 'Agender', 
         'Transgender', 'Two-spirit', 'Other', 'Prefer not to say'
     ];
+
+        const handleContinue = () => {
+        const personalData = {
+            name,
+            dateOfBirth: { day, month, year },
+            selectedGender,
+            genderIdentity
+        }
+        onContinue(personalData)
+    }
+
+    const handleSkip = () => {
+        onSkip()
+    }
 
     return(
         <div className="min-h-screen font-sans bg-gray-50">
@@ -82,10 +96,10 @@ function PersonalInfo(){
                                 />
                                 
                                 <div className="pt-2">
-                                    <Button text="CONTINUE"/>
+                                    <Button text="CONTINUE" onClick={handleContinue}/>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-sm lg:text-base">Don't want to fill it up now? <a href="#" className="font-medium transition-all duration-100 hover:font-bold">Skip</a></p>
+                                    <p className="text-sm lg:text-base">Don't want to fill it up now? <button onClick={handleSkip} className="font-medium transition-all duration-100 hover:font-bold">Skip</button></p>
                                 </div>
                             </div>
                         </div>
@@ -147,10 +161,10 @@ function PersonalInfo(){
                         />
                         
                         <div className="pt-2">
-                            <Button text="CONTINUE"/>
+                            <Button text="CONTINUE" onClick={handleContinue}/>
                         </div>
                         <div className="text-center">
-                            <p className="text-sm">Don't want to fill it up now? <a href="#" className="font-medium transition-all duration-100 hover:font-bold">Skip</a></p>
+                            <p className="text-sm">Don't want to fill it up now? <button onClick={handleSkip} className="font-medium transition-all duration-100 hover:font-bold">Skip</button></p>
                         </div>
                     </div>
                 </div>
