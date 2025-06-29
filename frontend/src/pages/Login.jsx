@@ -12,22 +12,59 @@ function Login({ onSwitchToSignup }){
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
+    const validateForm = () => {
+        if (!email.trim()) {
+            setError('Email is required')
+            return false
+        }
+
+        if (!email.includes('@') || !email.includes('.')) {
+            setError('Please enter a valid email address')
+            return false
+        }
+
+        if (!password) {
+            setError('Password is required')
+            return false
+        }
+
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters long')
+            return false
+        }
+
+        return true
+    }
+
     const handleLogin = async (e) => {
         e.preventDefault()
-        setLoading(true)
         setError('')
+
+        if (!validateForm()) {
+            return
+        }
+
+        setLoading(true)
 
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
+                email: email.trim(),
                 password: password,
             })
 
             if (error) {
-                setError(error.message)
+                if (error.message.includes('Invalid login credentials')) {
+                    setError('Invalid email or password. Please check your credentials and try again.')
+                } else if (error.message.includes('Email not confirmed')) {
+                    setError('Please verify your email address before logging in.')
+                } else if (error.message.includes('Too many requests')) {
+                    setError('Too many login attempts. Please wait a moment before trying again.')
+                } else {
+                    setError(error.message)
+                }
             }
         } catch (error) {
-            setError('An unexpected error occurred')
+            setError('An unexpected error occurred. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -37,7 +74,7 @@ function Login({ onSwitchToSignup }){
         <div className="min-h-screen font-sans bg-gray-50">
             {/* Desktop Layout */}
             <div className="hidden h-screen md:flex">
-                <div className="flex flex-col items-center justify-center flex-1 px-8 lg:px-16">
+                <div className="flex flex-col items-center justify-center flex-1 px-8 lg:px-12 xl:px-16">
                     <div className="max-w-lg xl:max-w-xl">
                         <div className="flex items-center mb-6 space-x-5 align-bottom">
                             <img src={logo} alt="Logo" className="w-16 lg:w-20"/>
@@ -49,7 +86,7 @@ function Login({ onSwitchToSignup }){
                     </div>
                 </div>
                 
-                <div className="flex items-center justify-center flex-1 px-8">
+                <div className="flex items-center justify-center flex-1 px-8 lg:px-12">
                     <div className="w-full max-w-md p-8 bg-white shadow-lg/20 rounded-2xl lg:p-10">
                         <h2 className="mb-6 text-2xl font-bold text-center text-gray-800 lg:text-3xl lg:mb-8">Login</h2>
                         <form onSubmit={handleLogin} className="space-y-4">
@@ -81,12 +118,12 @@ function Login({ onSwitchToSignup }){
                                 />
                             </div>
                             <div className="text-center">
-                                <p className="text-sm lg:text-base">
+                                <p className="text-sm text-gray-600 lg:text-base">
                                     Don't have an account with us? 
                                     <button 
                                         type="button"
                                         onClick={onSwitchToSignup}
-                                        className="ml-1 font-medium transition-all duration-100 hover:font-bold"
+                                        className="ml-1 font-medium text-black transition-all duration-200 hover:text-plum hover:font-bold hover:cursor-pointer"
                                     >
                                         Sign Up
                                     </button>
@@ -134,12 +171,12 @@ function Login({ onSwitchToSignup }){
                             />
                         </div>
                         <div className="text-center">
-                            <p className="text-sm">
+                            <p className="text-sm text-gray-600">
                                 Don't have an account with us? 
                                 <button 
                                     type="button"
                                     onClick={onSwitchToSignup}
-                                    className="ml-1 font-medium transition-all duration-100 hover:font-bold"
+                                    className="ml-1 font-medium text-black transition-all duration-200 hover:text-plum hover:font-bold hover:cursor-pointer"
                                 >
                                     Sign Up
                                 </button>
