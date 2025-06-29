@@ -7,6 +7,7 @@ import IndoorHobbies from "./pages/IndoorHobbies"
 import OutdoorHobbies from "./pages/OutdoorHobbies"
 import OtherHobbies from "./pages/OtherHobbies"
 import ActivityLevels from "./pages/ActivityLevels"
+import Dashboard from './pages/Dashboard'
 
 const supabase = createClient('https://vueayjtgnwoxzkbnkxdx.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1ZWF5anRnbndveHprYm5reGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3Njg0MTAsImV4cCI6MjA2NjM0NDQxMH0.qjqzNIkfpTp6JyRd60C7sEoLzz0Kw6t8Te1j8kGr0VE')
 
@@ -168,12 +169,13 @@ export default function App() {
           </div>
         </div>
       </header>
+
       
       <main className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="mb-4 text-3xl font-bold text-gray-800">Welcome to MindEase!</h2>
           <p className="mb-8 text-gray-600">Your personalized mental wellness journey starts here.</p>
-          
+          <Dashboard />
           <div className="p-6 bg-white rounded-lg shadow">
             <h3 className="mb-4 text-xl font-semibold">Your Profile Summary</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
