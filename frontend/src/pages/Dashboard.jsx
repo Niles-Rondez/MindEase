@@ -1,5 +1,7 @@
 import React from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const dummyMoodData = [
   { day: 'Mon', mood: 3 },
@@ -30,25 +32,12 @@ const mostCommonMood = Object.entries(moodFreq).reduce((a, b) => (a[1] > b[1] ? 
 
 export default function Dashboard() {
   return (
-    <div className="grid gap-6 p-4 lg:grid-cols-3">
-      {/* Mood Summary */}
-      <div className="p-6 bg-white rounded-xl shadow col-span-1 lg:col-span-1">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Weekly Mood Summary</h2>
-        <ul className="text-gray-600 text-sm space-y-1">
-          <p className="text-gray-700 text-sm">
-          This week, your mood showed a noticeable fluctuation. You started the week 
-          feeling relatively neutral on Monday and experienced a dip in mood on Tuesday 
-          and Thursday, suggesting possible stress or challenges midweek. However, your mood 
-          improved by the weekend, peaking on Sunday with a very positive emotional state. Maintaining this 
-          upward trend by engaging in relaxing or enjoyable activities could help sustain a more balanced mood 
-          throughout the week.
-        </p>
-        </ul>
-      </div>
-
+    <>
+    <Navbar/>
+    <div className="grid h-screen gap-6 p-4 lg:grid-cols-3">
       {/* Weekly Mood Chart */}
-      <div className="p-6 bg-white rounded-xl shadow col-span-2">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Weekly Mood Trend</h2>
+      <div className="col-span-2 p-6 bg-white shadow rounded-xl">
+        <h2 className="mb-4 text-xl font-semibold text-gray-800">Weekly Mood Trend</h2>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={dummyMoodData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -79,24 +68,32 @@ export default function Dashboard() {
             <Line type="monotone" dataKey="mood" stroke="#8884d8" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="mt-2 text-sm text-gray-600">
         The most frequently experienced mood was <strong>{moodMap[mostCommonMood]}</strong>.
       </p>
       </div>
-
-      {/* AI Insight */}
-      <div className="p-6 bg-white rounded-xl shadow col-span-2">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">AI Insight</h2>
-        <p className="text-gray-700 text-sm">
-          Based on your recent journal entries, you seem to have fluctuating moods midweek. Consider scheduling relaxing activities around Wednesday and Thursday.
+      {/* Mood Summary */}
+      <div className="col-span-1 p-6 bg-white shadow rounded-xl lg:col-span-1">
+        <h2 className="mb-4 text-xl font-semibold text-gray-800">Weekly Mood Summary</h2>
+        <ul className="space-y-1 text-sm text-gray-600">
+          <p className="text-sm text-gray-700">
+          This week, your mood showed a noticeable fluctuation. You started the week 
+          feeling relatively neutral on Monday and experienced a dip in mood on Tuesday 
+          and Thursday, suggesting possible stress or challenges midweek. However, your mood 
+          improved by the weekend, peaking on Sunday with a very positive emotional state. Maintaining this 
+          upward trend by engaging in relaxing or enjoyable activities could help sustain a more balanced mood 
+          throughout the week.
         </p>
+        </ul>
       </div>
 
-      {/* Meditation Videos */}
-      <div className="p-6 bg-white rounded-xl shadow col-span-1">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Meditation Videos</h2>
-        <div className="space-y-4">
-          <iframe
+      {/* AI Insight */}
+      <div className="col-span-2 p-6 bg-white shadow rounded-xl">
+        <h2 className="mb-4 text-xl font-semibold text-gray-800">AI Insight</h2>
+        <p className="text-sm text-gray-700">
+          Based on your recent journal entries, you seem to have fluctuating moods midweek. Consider scheduling relaxing activities around Wednesday and Thursday.
+        </p>
+        <iframe
             className="w-full rounded-lg"
             height="180"
             src="https://www.youtube.com/embed/inpok4MKVLM"
@@ -105,8 +102,10 @@ export default function Dashboard() {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
-        </div>
       </div>
     </div>
+    <Footer/>
+    </>
+
   )
 }
