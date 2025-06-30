@@ -15,6 +15,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [showSignup, setShowSignup] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0)
+  const [onboardingComplete, setOnboardingComplete] = useState(false)
   const [userData, setUserData] = useState({
     personalInfo: {},
     indoorHobbies: [],
@@ -28,6 +29,9 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
+      if (session) {
+        checkOnboardingStatus(session.user.id)
+      }
     })
 
     // Listen for auth changes
@@ -36,8 +40,18 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (session) {
-        // Check if user has completed onboarding
         checkOnboardingStatus(session.user.id)
+      } else {
+        // Reset state when user signs out
+        setOnboardingStep(0)
+        setOnboardingComplete(false)
+        setUserData({
+          personalInfo: {},
+          indoorHobbies: [],
+          outdoorHobbies: [],
+          otherHobbies: [],
+          activityLevel: 0
+        })
       }
     })
 
@@ -45,14 +59,45 @@ export default function App() {
   }, [])
 
   const checkOnboardingStatus = async (userId) => {
-    // You can check if user data exists in your database
-    // For now, we'll assume new users need onboarding
-    setOnboardingStep(1)
+    try {
+      // Check if user has completed onboarding in your database
+      // For now, we'll check localStorage as a fallback
+      const savedOnboardingStatus = localStorage.getItem(`onboarding_${userId}`)
+      const savedUserData = localStorage.getItem(`userData_${userId}`)
+      
+      if (savedOnboardingStatus === 'complete' && savedUserData) {
+        setOnboardingComplete(true)
+        setUserData(JSON.parse(savedUserData))
+        setOnboardingStep(0)
+      } else {
+        // Check if there's a saved onboarding step
+        const savedStep = localStorage.getItem(`onboardingStep_${userId}`)
+        if (savedStep) {
+          setOnboardingStep(parseInt(savedStep))
+        } else {
+          setOnboardingStep(1) // Start onboarding
+        }
+        setOnboardingComplete(false)
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error)
+      setOnboardingStep(1) // Default to start onboarding
+      setOnboardingComplete(false)
+    }
   }
 
   const handleSignOut = async () => {
+    const userId = session?.user?.id
+    if (userId) {
+      // Clear user-specific data from localStorage
+      localStorage.removeItem(`onboarding_${userId}`)
+      localStorage.removeItem(`userData_${userId}`)
+      localStorage.removeItem(`onboardingStep_${userId}`)
+    }
+    
     await supabase.auth.signOut()
     setOnboardingStep(0)
+    setOnboardingComplete(false)
     setUserData({
       personalInfo: {},
       indoorHobbies: [],
@@ -63,21 +108,45 @@ export default function App() {
   }
 
   const updateUserData = (step, data) => {
-    setUserData(prev => ({
-      ...prev,
+    const newUserData = {
+      ...userData,
       [step]: data
-    }))
+    }
+    setUserData(newUserData)
+    
+    // Save to localStorage for persistence
+    if (session?.user?.id) {
+      localStorage.setItem(`userData_${session.user.id}`, JSON.stringify(newUserData))
+    }
   }
 
   const nextStep = () => {
-    setOnboardingStep(prev => prev + 1)
+    const newStep = onboardingStep + 1
+    setOnboardingStep(newStep)
+    
+    // Save current step to localStorage
+    if (session?.user?.id) {
+      localStorage.setItem(`onboardingStep_${session.user.id}`, newStep.toString())
+    }
   }
 
   const completeOnboarding = async () => {
-    // Save all user data to database here
-    console.log('Complete user data:', userData)
-    // After saving, set onboarding as complete
-    setOnboardingStep(0)
+    try {
+      // Save all user data to database here
+      console.log('Complete user data:', userData)
+      
+      // Mark onboarding as complete
+      setOnboardingComplete(true)
+      setOnboardingStep(0)
+      
+      // Save completion status to localStorage
+      if (session?.user?.id) {
+        localStorage.setItem(`onboarding_${session.user.id}`, 'complete')
+        localStorage.removeItem(`onboardingStep_${session.user.id}`) // Clean up step tracking
+      }
+    } catch (error) {
+      console.error('Error completing onboarding:', error)
+    }
   }
 
   // Loading state
@@ -102,7 +171,7 @@ export default function App() {
   }
 
   // Authenticated but needs onboarding
-  if (onboardingStep > 0) {
+  if (!onboardingComplete && onboardingStep > 0) {
     switch (onboardingStep) {
       case 1:
         return <PersonalInfo 

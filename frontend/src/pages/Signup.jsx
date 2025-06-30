@@ -13,28 +13,53 @@ function Signup({ onSwitchToLogin }){
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleSignup = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        setError('')
-
-        // Check if passwords match
-        if (password !== confirmPassword) {
-            setError('Passwords do not match')
-            setLoading(false)
-            return
+    const validateForm = () => {
+        if (!email.trim()) {
+            setError('Email is required')
+            return false
         }
 
-        // Basic password validation
+        if (!email.includes('@') || !email.includes('.')) {
+            setError('Please enter a valid email address')
+            return false
+        }
+
+        if (!password) {
+            setError('Password is required')
+            return false
+        }
+
         if (password.length < 6) {
             setError('Password must be at least 6 characters long')
-            setLoading(false)
+            return false
+        }
+
+        if (!confirmPassword) {
+            setError('Please confirm your password')
+            return false
+        }
+
+        if (password !== confirmPassword) {
+            setError('Passwords do not match')
+            return false
+        }
+
+        return true
+    }
+
+    const handleSignup = async (e) => {
+        e.preventDefault()
+        setError('')
+
+        if (!validateForm()) {
             return
         }
+
+        setLoading(true)
 
         try {
             const { data, error } = await supabase.auth.signUp({
-                email: email,
+                email: email.trim(),
                 password: password,
                 options: {
                     emailRedirectTo: undefined // Disable email confirmation
@@ -42,14 +67,22 @@ function Signup({ onSwitchToLogin }){
             })
 
             if (error) {
-                setError(error.message)
+                if (error.message.includes('already registered')) {
+                    setError('An account with this email already exists. Please try logging in instead.')
+                } else if (error.message.includes('Password should be')) {
+                    setError('Password is too weak. Please use a stronger password with at least 6 characters.')
+                } else if (error.message.includes('Invalid email')) {
+                    setError('Please enter a valid email address.')
+                } else {
+                    setError(error.message)
+                }
             } else {
                 // Since email confirmation is disabled, user should be automatically signed in
                 // The auth state change will be handled by the parent App component
                 console.log('User signed up successfully:', data)
             }
         } catch (error) {
-            setError('An unexpected error occurred')
+            setError('An unexpected error occurred. Please try again.')
             console.error('Signup error:', error)
         } finally {
             setLoading(false)
@@ -60,7 +93,7 @@ function Signup({ onSwitchToLogin }){
         <div className="min-h-screen font-sans bg-gray-50">
             {/* Desktop Layout */}
             <div className="hidden h-screen md:flex">
-                <div className="flex flex-col items-center justify-center flex-1 px-8 lg:px-16">
+                <div className="flex flex-col items-center justify-center flex-1 px-8 lg:px-12 xl:px-16">
                     <div className="max-w-lg xl:max-w-xl">
                         <div className="flex items-center mb-6 space-x-5 align-bottom">
                             <img src={logo} alt="Logo" className="w-16 lg:w-20"/>
@@ -72,7 +105,7 @@ function Signup({ onSwitchToLogin }){
                     </div>
                 </div>
                 
-                <div className="flex items-center justify-center flex-1 px-8">
+                <div className="flex items-center justify-center flex-1 px-8 lg:px-12">
                     <div className="w-full max-w-md p-8 bg-white shadow-lg/20 rounded-2xl lg:p-10">
                         <h2 className="mb-6 text-2xl font-bold text-center text-gray-800 lg:text-3xl lg:mb-8">Sign Up</h2>
                         <form onSubmit={handleSignup} className="space-y-4">
@@ -111,12 +144,12 @@ function Signup({ onSwitchToLogin }){
                                 />
                             </div>
                             <div className="text-center">
-                                <p className="text-sm lg:text-base">
+                                <p className="text-sm text-gray-600 lg:text-base">
                                     Already have an account? 
                                     <button 
                                         type="button"
                                         onClick={onSwitchToLogin}
-                                        className="ml-1 font-medium transition-all duration-100 hover:font-bold"
+                                        className="ml-1 font-medium text-black transition-all duration-200 hover:text-plum hover:font-bold hover:cursor-pointer"
                                     >
                                         Log In
                                     </button>
@@ -171,12 +204,12 @@ function Signup({ onSwitchToLogin }){
                             />
                         </div>
                         <div className="text-center">
-                            <p className="text-sm">
+                            <p className="text-sm text-gray-600">
                                 Already have an account? 
                                 <button 
                                     type="button"
                                     onClick={onSwitchToLogin}
-                                    className="ml-1 font-medium transition-all duration-100 hover:font-bold"
+                                    className="ml-1 font-medium text-black transition-all duration-200 hover:text-plum hover:font-bold hover:cursor-pointer"
                                 >
                                     Log In
                                 </button>
