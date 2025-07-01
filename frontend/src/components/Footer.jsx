@@ -1,7 +1,7 @@
 function Footer() {
   return (
-    <footer className="py-4 text-center bg-gray-100">
-      <div className="container mx-auto">
+    <footer className="py-4 mt-20 text-center bg-gray-100">
+      <div className="container mx-auto my-10">
         <a href="" className="text-gray-600 hover:underline">Privacy Policy</a>
         <span className="mx-2">|</span>
         <a href="" className="text-gray-600 hover:underline">Terms of Service</a>
