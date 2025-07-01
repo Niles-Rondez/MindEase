@@ -77,7 +77,7 @@ const indoorHobbiesData = {
   "Gardening & Home": [{ id: 54, name: "Indoor Gardening", icon: "🪴" }],
 };
 
-function IndoorHobbies({ onContinue, onSkip }) {
+function IndoorHobbies({ onContinue, onSkip, userId }) {
   const [selectedHobbies, setSelectedHobbies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -89,8 +89,26 @@ function IndoorHobbies({ onContinue, onSkip }) {
     );
   };
 
-  const handleContinue = () => {
-    onContinue(selectedHobbies);
+  const handleContinue = async () => {
+    try {
+      
+      await fetch("http://localhost:3000/api/user-hobby", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hobbyIds: selectedHobbies }),
+      });
+
+      // 2. 
+      await fetch("http://localhost:3000/api/profiles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hobbyIds: selectedHobbies }),
+      });
+
+      onContinue(selectedHobbies);
+    } catch (error) {
+      console.error("Error submitting hobbies:", error);
+    }
   };
 
   const handleSkip = () => {

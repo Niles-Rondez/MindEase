@@ -34,7 +34,7 @@ const outdoorHobbiesData = {
   ],
 };
 
-function OutdoorHobbbies({ onContinue, onSkip }) {
+function OutdoorHobbbies({ userId, onContinue, onSkip }) {
   const [selectedHobbies, setSelectedHobbies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -46,8 +46,36 @@ function OutdoorHobbbies({ onContinue, onSkip }) {
     );
   };
 
-  const handleContinue = () => {
-    onContinue(selectedHobbies);
+  const handleContinue = async () => {
+    try {
+      // Step 1: Fetch current hobby_ids from profile
+      const res = await fetch(`http://localhost:3000/api/profiles?userId=${userId}`);
+      const profile = await res.json();
+      const existingHobbyIds = profile?.hobby_ids || [];
+
+      // Step 2: Merge with newly selected outdoor hobbies
+      const mergedHobbyIds = Array.from(new Set([...existingHobbyIds, ...selectedHobbies]));
+
+      // Step 3: Only insert new outdoor hobbies into user_hobby
+      if (selectedHobbies.length > 0) {
+        await fetch("http://localhost:3000/api/user-hobby", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, hobbyIds: selectedHobbies }),
+        });
+      }
+
+      // Step 4: Update merged hobby_ids in profiles
+      await fetch("http://localhost:3000/api/profiles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hobbyIds: mergedHobbyIds }),
+      });
+
+      onContinue(selectedHobbies);
+    } catch (error) {
+      console.error("Error submitting outdoor hobbies:", error);
+    }
   };
 
   const handleSkip = () => {

@@ -185,6 +185,7 @@ export default function App() {
         />
       case 2:
         return <IndoorHobbies 
+        userId={session?.user?.id}
           onContinue={(data) => {
             updateUserData('indoorHobbies', data)
             nextStep()
@@ -192,7 +193,8 @@ export default function App() {
           onSkip={nextStep}
         />
       case 3:
-        return <OutdoorHobbies 
+        return <OutdoorHobbies
+        userId={session?.user?.id} 
           onContinue={(data) => {
             updateUserData('outdoorHobbies', data)
             nextStep()
@@ -200,7 +202,8 @@ export default function App() {
           onSkip={nextStep}
         />
       case 4:
-        return <OtherHobbies 
+        return <OtherHobbies
+        userId={session?.user?.id} 
           onContinue={(data) => {
             updateUserData('otherHobbies', data)
             nextStep()
@@ -208,7 +211,8 @@ export default function App() {
           onSkip={nextStep}
         />
       case 5:
-        return <ActivityLevels 
+        return <ActivityLevels
+        userId={session?.user?.id} 
           onContinue={(data) => {
             updateUserData('activityLevel', data)
             completeOnboarding()

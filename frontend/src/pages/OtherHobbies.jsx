@@ -11,7 +11,7 @@ const otherHobbiesData = {
   ],
 };
 
-function OtherHobbies({ onContinue, onSkip }) {
+function OtherHobbies({ userId, onContinue, onSkip }) {
   const [selectedHobbies, setSelectedHobbies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -23,9 +23,36 @@ function OtherHobbies({ onContinue, onSkip }) {
     );
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+  try {
+    if (selectedHobbies.length > 0) {
+      // Save to user_hobby
+      await fetch("http://localhost:3000/api/user-hobby", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hobbyIds: selectedHobbies }),
+      });
+
+      // Merge into profiles table
+      const res = await fetch(`http://localhost:3000/api/profiles?userId=${userId}`);
+      const json = await res.json();
+      const existing = Array.isArray(json?.hobby_ids) ? json.hobby_ids : [];
+
+      const merged = [...new Set([...existing, ...selectedHobbies])];
+
+      await fetch("http://localhost:3000/api/profiles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hobbyIds: merged }),
+      });
+    }
+
     onContinue(selectedHobbies);
-  };
+  } catch (error) {
+    console.error("Error submitting other hobbies:", error);
+  }
+};
+
 
   const handleSkip = () => {
     onSkip();
