@@ -225,52 +225,15 @@ export default function App() {
 
   // Authenticated and onboarding complete - show main app
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b shadow-sm">
-        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <h1 className="text-2xl font-bold text-plum">MindEase</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-600">Welcome, {session.user.email}</span>
-              <button
+    <div>
+      <main>
+          <Dashboard />
+          <button
                 onClick={handleSignOut}
                 className="px-4 py-2 text-white transition-colors bg-red-500 rounded-lg hover:bg-red-600"
               >
                 Sign Out
               </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      
-      <main className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-800">Welcome to MindEase!</h2>
-          <p className="mb-8 text-gray-600">Your personalized mental wellness journey starts here.</p>
-          <Dashboard />
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h3 className="mb-4 text-xl font-semibold">Your Profile Summary</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="p-4 rounded-lg bg-lilac/10">
-                <h4 className="font-semibold text-plum">Indoor Hobbies</h4>
-                <p className="text-sm text-gray-600">{userData.indoorHobbies.length} selected</p>
-              </div>
-              <div className="p-4 rounded-lg bg-lilac/10">
-                <h4 className="font-semibold text-plum">Outdoor Hobbies</h4>
-                <p className="text-sm text-gray-600">{userData.outdoorHobbies.length} selected</p>
-              </div>
-              <div className="p-4 rounded-lg bg-lilac/10">
-                <h4 className="font-semibold text-plum">Other Interests</h4>
-                <p className="text-sm text-gray-600">{userData.otherHobbies.length} selected</p>
-              </div>
-              <div className="p-4 rounded-lg bg-lilac/10">
-                <h4 className="font-semibold text-plum">Activity Level</h4>
-                <p className="text-sm text-gray-600">Level {userData.activityLevel}</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </main>
     </div>
   )
