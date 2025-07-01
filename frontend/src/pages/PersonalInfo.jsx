@@ -5,33 +5,79 @@ import ProgressBar from "../components/ProgressBar"
 import GenderSlider from "../components/GenderSlider"
 import Dropdown from "../components/Dropdown"
 
-function PersonalInfo({ onContinue, onSkip }){
+function PersonalInfo({ userId, onContinue, onSkip }){
     const [selectedGender, setSelectedGender] = useState('');
     const [genderIdentity, setGenderIdentity] = useState('');
     const [name, setName] = useState('');
     const [day, setDay] = useState('');
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const genderIdentityOptions = [
         'Man', 'Woman', 'Non-binary', 'Genderfluid', 'Agender', 
         'Transgender', 'Two-spirit', 'Other', 'Prefer not to say'
     ];
 
-        const handleContinue = () => {
-        const personalData = {
-            name,
-            dateOfBirth: { day, month, year },
-            selectedGender,
-            genderIdentity
+    const handleContinue = async () => {
+        if (!userId) {
+            setError('User ID is missing. Please try logging in again.');
+            return;
         }
-        onContinue(personalData)
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Format the birthdate as YYYY-MM-DD
+            const birthdate = year && month && day ? 
+                `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : null;
+
+            const personalData = {
+                userId: userId,
+                first_name: name,
+                birthdate: birthdate,
+                sex: selectedGender,
+                gender_identity: genderIdentity,
+                onboarding_complete: false 
+            };
+
+            const response = await fetch('http://localhost:3000/api/profiles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: userId,
+                    first_name: name,
+                    birthdate: birthdate,
+                    sex: selectedGender,
+                    gender_identity: genderIdentity,
+                    onboarding_complete: false
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to save personal information');
+            }
+
+            console.log('Personal info saved successfully:', result);
+            onContinue(personalData);
+
+        } catch (error) {
+            console.error('Error saving personal info:', error);
+            setError(error.message || 'Failed to save personal information. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     }
 
     const handleSkip = () => {
         onSkip()
     }
-
     return(
         <div className="min-h-screen font-sans bg-gray-50">
             {/* Desktop Layout */}

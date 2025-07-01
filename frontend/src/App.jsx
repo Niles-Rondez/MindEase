@@ -176,6 +176,7 @@ export default function App() {
     switch (onboardingStep) {
       case 1:
         return <PersonalInfo 
+        userId={session?.user?.id} //pass the userid for personal info
           onContinue={(data) => {
             updateUserData('personalInfo', data)
             nextStep()
