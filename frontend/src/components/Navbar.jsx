@@ -9,7 +9,7 @@ function Navbar() {
     };
 
     return (
-        <nav className="shadow-md bg-light-purple">
+        <nav className="sticky top-0 shadow-md bg-light-purple">
             <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     {/* Logo and Brand */}

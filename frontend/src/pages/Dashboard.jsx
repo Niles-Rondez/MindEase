@@ -43,11 +43,11 @@ export default function Dashboard() {
   return (
     <div className="w-full min-h-screen bg-gray-50">
       <Navbar />
-      <div className="flex flex-col items-center w-full h-screen">
+      <div className="flex flex-col items-center w-full min-h-screen">
         <div className="w-full mx-auto max-w-7xl">
           <div className="p-5 lg:px-10 lg:py-5">
             <h1 className="text-2xl font-bold">👋 Welcome back, User</h1>
-            <p className="px-10 text-md text-black/50">Here’s a snapshot of your mental wellness this week.</p>
+            <p className="px-10 text-md text-black/50">Here's a snapshot of your mental wellness this week.</p>
           </div>
 
           <div className="grid gap-4 p-4 md:gap-6 lg:grid-cols-3 auto-rows-min">
@@ -118,8 +118,7 @@ export default function Dashboard() {
               </div>
             </div>
             
-
-{/* AI Insight */}
+            {/* AI Insight */}
             <div className="flex flex-col lg:flex-row col-span-1 lg:col-span-3 p-4 md:p-6 bg-white shadow rounded-xl min-h-[300px] lg:min-h-[400px]">
               <div className="flex-1 mb-4 lg:pr-6 lg:mb-0">
                 <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
@@ -144,9 +143,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Weekly Summary and Mood Trend Cards */}
-            <div className="flex lg:w-7xl gap-x-10">
-              <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
+            {/* Bottom Cards - Fixed Responsive Layout */}
+            <div className="grid grid-cols-1 col-span-1 gap-4 lg:col-span-3 md:grid-cols-2 md:gap-6">
+              <div className="p-4 bg-white shadow md:p-6 rounded-xl">
                 <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
                   Weekly Mood Summary
                 </h2>
@@ -165,7 +164,7 @@ export default function Dashboard() {
                   possible stress or challenges midweek.
                 </p>
               </div>
-              <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
+              <div className="p-4 bg-white shadow md:p-6 rounded-xl">
                 <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
                   Mood Trend Analysis
                 </h2>
