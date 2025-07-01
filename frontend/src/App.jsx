@@ -26,66 +26,65 @@ export default function App() {
   })
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-      if (session) {
-        checkOnboardingStatus(session.user.id)
-      }
-    })
+  const init = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setSession(session);
+
+    if (session) {
+      await checkOnboardingStatus(session.user.id); // wait for this
+    }
+
+    setLoading(false); // only set loading false when everything is ready
+  };
+
+  init();
+
 
     // Listen for auth changes
     const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (session) {
-        checkOnboardingStatus(session.user.id)
-      } else {
-        // Reset state when user signs out
-        setOnboardingStep(0)
-        setOnboardingComplete(false)
-        setUserData({
-          personalInfo: {},
-          indoorHobbies: [],
-          outdoorHobbies: [],
-          otherHobbies: [],
-          activityLevel: 0
-        })
-      }
-    })
+  data: { subscription },
+} = supabase.auth.onAuthStateChange(async (_event, session) => {
+  setSession(session);
+  if (session) {
+    setLoading(true); // block rendering until onboarding check is done
+    await checkOnboardingStatus(session.user.id);
+    setLoading(false);
+  } else {
+    setOnboardingStep(0);
+    setOnboardingComplete(false);
+    setUserData({
+      personalInfo: {},
+      indoorHobbies: [],
+      outdoorHobbies: [],
+      otherHobbies: [],
+      activityLevel: 0
+    });
+  }
+});
 
     return () => subscription.unsubscribe()
   }, [])
 
   const checkOnboardingStatus = async (userId) => {
-    try {
-      // Check if user has completed onboarding in your database
-      // For now, we'll check localStorage as a fallback
-      const savedOnboardingStatus = localStorage.getItem(`onboarding_${userId}`)
-      const savedUserData = localStorage.getItem(`userData_${userId}`)
-      
-      if (savedOnboardingStatus === 'complete' && savedUserData) {
-        setOnboardingComplete(true)
-        setUserData(JSON.parse(savedUserData))
-        setOnboardingStep(0)
-      } else {
-        // Check if there's a saved onboarding step
-        const savedStep = localStorage.getItem(`onboardingStep_${userId}`)
-        if (savedStep) {
-          setOnboardingStep(parseInt(savedStep))
-        } else {
-          setOnboardingStep(1) // Start onboarding
-        }
-        setOnboardingComplete(false)
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error)
-      setOnboardingStep(1) // Default to start onboarding
-      setOnboardingComplete(false)
+  try {
+    const response = await fetch(`http://localhost:3000/api/profiles?userId=${userId}`);
+    const result = await response.json();
+
+    // Access onboarding_complete directly
+    if (result.success && result.onboarding_complete === true) {
+      setOnboardingComplete(true);
+      setOnboardingStep(0); // skip onboarding
+    } else {
+      const savedStep = localStorage.getItem(`onboardingStep_${userId}`);
+      setOnboardingStep(savedStep ? parseInt(savedStep) : 1);
+      setOnboardingComplete(false);
     }
+  } catch (error) {
+    console.error("Error checking onboarding status:", error);
+    setOnboardingStep(1);
+    setOnboardingComplete(false);
   }
+};
 
   const handleSignOut = async () => {
     const userId = session?.user?.id

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import ProgressBar from "../components/ProgressBar";
 import runningMan from "../assets/running_man.png";
 
-function ActivityLevels({ onContinue, onSkip }) {
+function ActivityLevels({userId, onContinue, onSkip }) {
   const [selectedLevel, setSelectedLevel] = useState(0);
 
   const activityLevels = [
@@ -48,9 +48,24 @@ function ActivityLevels({ onContinue, onSkip }) {
     return ((level - 1) / 4) * 180;
   };
 
-  const handleContinue = () => {
-    onContinue(selectedLevel);
-  };
+  const handleContinue = async () => {
+  try {
+    await fetch("http://localhost:3000/api/profiles", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        activityLevel: selectedLevel,
+        onboardingComplete: true  //mark onboarding as complete
+      }),
+    });
+
+    onContinue(selectedLevel);  // continue to dashboard or main screen
+  } catch (error) {
+    console.error("Error submitting activity level:", error);
+  }
+};
+
 
   const handleSkip = () => {
     onSkip();
