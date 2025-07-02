@@ -2,30 +2,66 @@ import React, { useState } from 'react';
 import MoodSlider from './MoodSlider';
 import ImageUpload from './ImageUpload';
 
-function JournalModal({ isOpen, onClose, onSave }) {
-    const [thoughts, setThoughts] = useState('');
-    const [images, setImages] = useState([]);
-    const [mood, setMood] = useState(3); // Default to neutral
+function JournalModal({ isOpen, onClose, onSave, userId }) {
+  const [thoughts, setThoughts] = useState('');
+  const [images, setImages] = useState([]);
+  const [mood, setMood] = useState(3);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleSave = () => {
-        const journalEntry = {
-            thoughts,
-            images,
-            mood,
-            date: new Date().toISOString()
-        };
-        onSave(journalEntry);
+  const moodColorMap = {
+    1: 'Red',
+    2: 'Orange',
+    3: 'Yellow',
+    4: 'Green',
+    5: 'Blue'
+  };
+
+  const handleSave = async () => {
+    if (!userId) return;
+
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('entry_text', thoughts);
+      formData.append('mood_rating', moodColorMap[mood]);
+
+      images.forEach((img) => {
+        if (img.file) formData.append('file', img.file);
+      });
+
+      const response = await fetch('http://localhost:3000/api/journal-entries', {
+        method: 'POST',
+        body: formData
+      });
+
+      const text = await response.text();
+      const result = text ? JSON.parse(text) : null;
+
+      if (response.ok && result?.success) {
+        await onSave(result.entry);
         handleDiscard();
-    };
+      } else {
+        alert('Failed to save journal entry.');
+        console.error('Journal entry error:', result?.error || 'Unknown error');
+      }
+    } catch (err) {
+      alert('An error occurred. Please try again.');
+      console.error('Unexpected error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleDiscard = () => {
-        setThoughts('');
-        setImages([]);
-        setMood(3);
-        onClose();
-    };
+  const handleDiscard = () => {
+    setThoughts('');
+    setImages([]);
+    setMood(3);
+    onClose();
+  };
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

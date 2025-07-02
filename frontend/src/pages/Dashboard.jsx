@@ -39,10 +39,10 @@ const mostCommonMood = Object.entries(moodFreq).reduce((a, b) =>
   a[1] > b[1] ? a : b
 )[0];
 
-export default function Dashboard() {
+export default function Dashboard({ userId }) {
   return (
     <div className="w-full min-h-screen bg-gray-50">
-      <Navbar />
+      <Navbar userId={userId}/>
       <div className="flex flex-col items-center w-full min-h-screen">
         <div className="w-full mx-auto max-w-7xl">
           <div className="p-5 lg:px-10 lg:py-5">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import JournalModal from './JournalModal';
 import logo from '../assets/logo.png';
 
-function Navbar() {
+function Navbar({ userId }) { 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
 
@@ -121,6 +121,7 @@ function Navbar() {
                 isOpen={isJournalModalOpen}
                 onClose={() => setIsJournalModalOpen(false)}
                 onSave={handleSaveJournal}
+                userId={userId}
             />
         </>
     );
