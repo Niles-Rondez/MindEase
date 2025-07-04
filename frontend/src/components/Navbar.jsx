@@ -35,7 +35,7 @@ function Navbar({ userId }) {
                         {/* Desktop Menu */}
                         <div className="items-center hidden gap-5 space-x-4 text-2xl font-medium md:flex">
                             <a href="/dashboard" className="transition-all duration-200 text-purple hover:text-white hover:scale-110 hover:text-shadow-lg">Dashboard</a>
-                            <a href="/journal" className="transition-all duration-200 text-purple hover:text-white hover:scale-110 hover:text-shadow-lg">Journal</a>
+                            <a href="/Logbook" className="transition-all duration-200 text-purple hover:text-white hover:scale-110 hover:text-shadow-lg">Logbook</a>
                             <a href="/insights" className="transition-all duration-200 text-purple hover:text-white hover:scale-110 hover:text-shadow-lg">AI Insights</a>
                             <button 
                                 onClick={openJournalModal}
@@ -90,11 +90,11 @@ function Navbar({ userId }) {
                                 Dashboard
                             </a>
                             <a 
-                                href="/journal" 
+                                href="/Logbook" 
                                 className="block px-3 py-2 text-base font-medium transition-all duration-200 rounded-md text-purple hover:text-white hover:bg-purple"
                                 onClick={() => setIsMenuOpen(false)}
                             >
-                                Journal
+                                Logbook
                             </a>
                             <a 
                                 href="/insights" 
