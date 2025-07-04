@@ -8,8 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 
 const dummyMoodData = [
   { day: "Mon", mood: 3 },
@@ -41,8 +39,7 @@ const mostCommonMood = Object.entries(moodFreq).reduce((a, b) =>
 
 export default function Dashboard({ userId }) {
   return (
-    <div className="w-full min-h-screen bg-gray-50">
-      <Navbar userId={userId}/>
+    <div className="w-full">
       <div className="flex flex-col items-center w-full min-h-screen">
         <div className="w-full mx-auto max-w-7xl">
           <div className="p-5 lg:px-10 lg:py-5">
@@ -183,7 +180,6 @@ export default function Dashboard({ userId }) {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Search, Filter, Calendar, Heart } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 // Mock data for demonstration
 const mockJournalEntries = [
@@ -206,9 +204,7 @@ const Logbook = ({ userId }) => {
   }, {});
 
   return (
-    <div className="w-full min-h-screen bg-gray-50">
-      <Navbar userId={userId} />
-      
+    <div className="w-full">
       <div className="flex flex-col items-center w-full min-h-screen">
         <div className="w-full mx-auto max-w-7xl">
           {/* Header */}
@@ -325,8 +321,6 @@ const Logbook = ({ userId }) => {
         onClose={closeModal}
         entry={selectedEntry}
       />
-      
-      <Footer />
     </div>
   );
 };
