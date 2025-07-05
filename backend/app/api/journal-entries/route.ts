@@ -92,10 +92,39 @@ export async function POST(request: NextRequest) {
       ));
     }
 
+  const nlpRes = await fetch('http://localhost:8000/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: entryText }),
+  });
+  const nlpData = await nlpRes.json();
+  const { sentiment, confidence } = nlpData;
+
+
+  const { data: insertedEntry, error: insertError } = await supabaseAdmin
+    .from('journal_entries')
+    .insert({
+      user_id: userId,
+      entry_text: entryText,
+      mood_rating: moodRating,
+      photo_url: photoUrls.length ? photoUrls : null,
+      sentiment_label: sentiment,
+      sentiment_score: confidence
+    })
+    .select();
+
+    if (insertError) {
+      console.error('[Insert Error]', insertError);
+      return addCorsHeaders(NextResponse.json(
+        { success: false, error: insertError.message },
+        { status: 500 }
+      ));
+    }
+
     return addCorsHeaders(NextResponse.json({
       success: true,
       message: 'Journal entry saved successfully',
-      entry: data[0]
+      entry: insertedEntry[0]
     }));
   } catch (error: any) {
     console.error('[Fatal Error]', error);
