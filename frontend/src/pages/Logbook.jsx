@@ -1,77 +1,10 @@
-import React, { useState } from 'react';
-import { Search, Filter, Calendar, Heart } from 'lucide-react';
-
-// Mock data for demonstration
-const mockJournalEntries = [
-  {
-    id: 1,
-    date: '2025-06-22',
-    mood: 'Happy',
-    moodEmoji: '🙂',
-    entry: 'Today was an amazing day! I went to the park with my friends and we had such a great time playing frisbee and having a picnic. The weather was perfect and I felt so grateful for these moments.',
-    images: []
-  },
-  {
-    id: 2,
-    date: '2025-06-21',
-    mood: 'Neutral',
-    moodEmoji: '😐',
-    entry: 'Just a regular day at work. Nothing special happened but I got through my tasks efficiently. Looking forward to the weekend.',
-    images: []
-  },
-  {
-    id: 3,
-    date: '2025-06-20',
-    mood: 'Very Happy',
-    moodEmoji: '😊',
-    entry: 'Got promoted at work today! I am so excited and proud of myself. All the hard work has finally paid off. Celebrating with dinner tonight.',
-    images: []
-  },
-  {
-    id: 4,
-    date: '2025-06-19',
-    mood: 'Sad',
-    moodEmoji: '🙁',
-    entry: 'Had a difficult conversation with my family today. Feeling a bit down but I know things will get better. Sometimes these tough moments help us grow.',
-    images: []
-  },
-  {
-    id: 5,
-    date: '2025-06-18',
-    mood: 'Happy',
-    moodEmoji: '🙂',
-    entry: 'Started reading a new book today and I absolutely love it! Spent the entire afternoon curled up with it and some hot tea. Perfect way to relax.',
-    images: []
-  },
-  {
-    id: 6,
-    date: '2025-05-15',
-    mood: 'Very Happy',
-    moodEmoji: '😊',
-    entry: 'Graduated from college today! Such an incredible milestone. My family was there to support me and I felt so loved and accomplished.',
-    images: []
-  },
-  {
-    id: 7,
-    date: '2025-05-10',
-    mood: 'Neutral',
-    moodEmoji: '😐',
-    entry: 'Studying for finals. Feeling stressed but manageable. Just need to push through these last few weeks.',
-    images: []
-  },
-  {
-    id: 8,
-    date: '2025-04-28',
-    mood: 'Happy',
-    moodEmoji: '🙂',
-    entry: 'Spring is finally here! Went for a long walk in the botanical gardens. The flowers are blooming beautifully and it lifted my spirits.',
-    images: []
-  }
-];
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Calendar, Heart, Loader2 } from 'lucide-react';
 
 const LogbookModal = ({ isOpen, onClose, entry }) => {
   if (!isOpen || !entry) return null;
 
+  // Format date to show nicely in modal
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -82,6 +15,18 @@ const LogbookModal = ({ isOpen, onClose, entry }) => {
     });
   };
 
+  // ADDED: Function to get mood text from emoji
+  const getMoodFromEmoji = (emoji) => {
+    const emojiToMood = {
+      '😢': 'Very Sad',
+      '😕': 'Sad',
+      '😐': 'Neutral', 
+      '😊': 'Happy',
+      '😄': 'Very Happy'
+    };
+    return emojiToMood[emoji] || 'Neutral';
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
@@ -90,7 +35,10 @@ const LogbookModal = ({ isOpen, onClose, entry }) => {
           <div className="flex items-center gap-3">
             <span className="text-2xl">{entry.moodEmoji}</span>
             <div>
-              <h2 className="text-xl font-bold text-gray-800">{entry.mood}</h2>
+              {/* FIXED: Use the mood text from the entry or convert from emoji */}
+              <h2 className="text-xl font-bold text-gray-800">
+                {entry.mood || getMoodFromEmoji(entry.moodEmoji)}
+              </h2>
               <p className="text-sm text-gray-600">{formatDate(entry.date)}</p>
             </div>
           </div>
@@ -111,6 +59,7 @@ const LogbookModal = ({ isOpen, onClose, entry }) => {
             <p className="leading-relaxed text-gray-700">{entry.entry}</p>
           </div>
 
+          {/* Show images if they exist */}
           {entry.images && entry.images.length > 0 && (
             <div className="mb-6">
               <h3 className="mb-3 text-lg font-semibold text-gray-800">Images</h3>
@@ -133,24 +82,146 @@ const LogbookModal = ({ isOpen, onClose, entry }) => {
 };
 
 const Logbook = ({ userId }) => {
+  // State for modal
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [moodFilter, setMoodFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
+  
+  // State for API data
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
 
+  // Options for mood filter dropdown
   const moodOptions = ['All', 'Very Happy', 'Happy', 'Neutral', 'Sad', 'Very Sad'];
 
+  // Main function to get entries from API
+  const fetchEntries = async (reset = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Build the API URL with parameters
+      const params = new URLSearchParams({
+        userId: userId,
+        limit: '50',
+        offset: reset ? '0' : '0' // You can add pagination later
+      });
+
+      // Add filters to URL if they are set
+      if (moodFilter !== 'All') {
+        // Convert mood text to rating number
+        const moodRating = getMoodRating(moodFilter);
+        if (moodRating) {
+          params.append('mood', moodRating);
+        }
+      }
+
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+
+      // Add date filters
+      if (dateFilter !== 'All') {
+        const dateRange = getDateRange(dateFilter);
+        if (dateRange.from) params.append('dateFrom', dateRange.from);
+        if (dateRange.to) params.append('dateTo', dateRange.to);
+      }
+
+      // Call the API
+      const apiUrl = `http://localhost:3000/api/get-journal-entries?${params}`;
+      
+      console.log('Fetching from:', apiUrl);
+      const response = await fetch(apiUrl);
+      
+      console.log('Response status:', response.status);
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.log('Non-JSON response:', textResponse);
+        throw new Error(`Server returned ${response.status}: ${textResponse.substring(0, 200)}...`);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Failed to fetch entries`);
+      }
+
+      if (data.success) {
+        setEntries(data.entries);
+        setHasMore(data.hasMore);
+      } else {
+        throw new Error(data.error || 'Failed to fetch entries');
+      }
+    } catch (err) {
+      console.error('Full error details:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert mood text to rating number for API
+  const getMoodRating = (moodText) => {
+    const moodMap = {
+      'Very Sad': '1',
+      'Sad': '2',
+      'Neutral': '3',
+      'Happy': '4',
+      'Very Happy': '5'
+    };
+    return moodMap[moodText];
+  };
+
+  // Get date range based on filter selection
+  const getDateRange = (filter) => {
+    const now = new Date();
+    const ranges = {
+      'This Week': {
+        from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        to: now.toISOString()
+      },
+      'This Month': {
+        from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+        to: now.toISOString()
+      },
+      'Last 3 Months': {
+        from: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        to: now.toISOString()
+      }
+    };
+    return ranges[filter] || {};
+  };
+
+  // Get entries when component loads or filters change
+  useEffect(() => {
+    if (userId) {
+      fetchEntries(true);
+    }
+  }, [userId, moodFilter, dateFilter, searchTerm]);
+
+  // Open modal with selected entry
   const openModal = (entry) => {
     setSelectedEntry(entry);
     setIsModalOpen(true);
   };
 
+  // Close modal
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedEntry(null);
   };
 
+  // Cut text if it's too long
   const truncateText = (text, wordLimit = 15) => {
     const words = text.split(' ');
     if (words.length > wordLimit) {
@@ -159,6 +230,7 @@ const Logbook = ({ userId }) => {
     return text;
   };
 
+  // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const day = date.getDate();
@@ -166,35 +238,14 @@ const Logbook = ({ userId }) => {
     return { day, weekday };
   };
 
+  // Get month and year for grouping
   const getMonthYear = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  // Filter entries
-  const filteredEntries = mockJournalEntries.filter(entry => {
-    const matchesSearch = entry.entry.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMood = moodFilter === 'All' || entry.mood === moodFilter;
-    const entryDate = new Date(entry.date);
-    const currentDate = new Date();
-    
-    let matchesDate = true;
-    if (dateFilter === 'This Week') {
-      const weekAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-      matchesDate = entryDate >= weekAgo;
-    } else if (dateFilter === 'This Month') {
-      matchesDate = entryDate.getMonth() === currentDate.getMonth() && 
-                   entryDate.getFullYear() === currentDate.getFullYear();
-    } else if (dateFilter === 'Last 3 Months') {
-      const threeMonthsAgo = new Date(currentDate.getTime() - 90 * 24 * 60 * 60 * 1000);
-      matchesDate = entryDate >= threeMonthsAgo;
-    }
-    
-    return matchesSearch && matchesMood && matchesDate;
-  });
-
-  // Group entries by month
-  const groupedEntries = filteredEntries.reduce((groups, entry) => {
+  // Group entries by month for display
+  const groupedEntries = entries.reduce((groups, entry) => {
     const monthYear = getMonthYear(entry.date);
     if (!groups[monthYear]) {
       groups[monthYear] = [];
@@ -202,6 +253,37 @@ const Logbook = ({ userId }) => {
     groups[monthYear].push(entry);
     return groups;
   }, {});
+
+  // Show loading spinner
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-500" />
+          <p className="text-gray-600">Loading your journal entries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error message
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="mb-4 text-6xl text-red-400">⚠️</div>
+          <h3 className="mb-2 text-lg font-semibold text-gray-600">Error loading entries</h3>
+          <p className="mb-4 text-gray-500">{error}</p>
+          <button
+            onClick={() => fetchEntries(true)}
+            className="px-4 py-2 text-white bg-purple-500 rounded-lg hover:bg-purple-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
