@@ -1,85 +1,76 @@
-import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { ThumbsUp, ThumbsDown, Heart, Clock, BookOpen, Coffee, Music, Target } from 'lucide-react';
+import * as React from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+import {
+  ThumbsUp, ThumbsDown, Heart, Clock, BookOpen,
+  Coffee, Music, Target
+} from 'lucide-react';
 
-// Mock data for mood patterns
-const weeklyMoodData = [
-  { day: 'Mon', mood: 3, activities: ['Work', 'Exercise'] },
-  { day: 'Tue', mood: 2, activities: ['Work', 'Meeting'] },
-  { day: 'Wed', mood: 1, activities: ['Work', 'Stress'] },
-  { day: 'Thu', mood: 1, activities: ['Work', 'Late night'] },
-  { day: 'Fri', mood: 2, activities: ['Work', 'Social'] },
-  { day: 'Sat', mood: 4, activities: ['Rest', 'Friends'] },
-  { day: 'Sun', mood: 3, activities: ['Rest', 'Family'] }
-];
-
-const moodDistribution = [
-  { mood: 'Positive', count: 2, color: '#4ade80' },
-  { mood: 'Neutral', count: 2, color: '#fbbf24' },
-  { mood: 'Negative', count: 3, color: '#f87171' }
-];
-
-const mockSuggestions = [
-  {
-    id: 1,
-    title: 'Morning Meditation',
-    description: 'Start your day with 10 minutes of mindfulness meditation to reduce midweek stress.',
-    icon: <Heart className="w-5 h-5" />,
-    category: 'Wellness',
-    rating: null
-  },
-  {
-    id: 2,
-    title: 'Wednesday Wind-Down',
-    description: 'Schedule a relaxing activity every Wednesday evening to combat midweek blues.',
-    icon: <Clock className="w-5 h-5" />,
-    category: 'Routine',
-    rating: null
-  },
-  {
-    id: 3,
-    title: 'Social Connection',
-    description: 'Plan to connect with friends or family on Tuesday to boost your mood.',
-    icon: <Coffee className="w-5 h-5" />,
-    category: 'Social',
-    rating: null
-  }
-];
-
-const personalizedRecommendations = [
-  {
-    id: 1,
-    title: 'Gratitude Journaling',
-    description: 'Based on your positive weekend moods, try writing down 3 things you\'re grateful for each morning.',
-    icon: <BookOpen className="w-6 h-6" />,
-    type: 'Activity',
-    difficulty: 'Easy'
-  },
-  {
-    id: 2,
-    title: 'Stress-Relief Playlist',
-    description: 'Create a calming playlist for your challenging midweek days.',
-    icon: <Music className="w-6 h-6" />,
-    type: 'Resource',
-    difficulty: 'Easy'
-  },
-  {
-    id: 3,
-    title: 'Weekly Goal Setting',
-    description: 'Set small, achievable goals each Monday to maintain motivation throughout the week.',
-    icon: <Target className="w-6 h-6" />,
-    type: 'Strategy',
-    difficulty: 'Medium'
-  }
-];
+const moodLabelMap = {
+  'Very Negative': 1,
+  'Negative': 2,
+  'Neutral': 3,
+  'Positive': 4,
+  'Very Positive': 5
+};
 
 const Insights = ({ userId }) => {
-  const [suggestions, setSuggestions] = useState(mockSuggestions);
+  const [weeklyMoodData, setWeeklyMoodData] = React.useState([]);
+  const [suggestions, setSuggestions] = React.useState([]);
+  const [aiInsight, setAiInsight] = React.useState('');
+  const [aiExplanation, setAiExplanation] = React.useState('');
+  const [aiPatterns, setAiPatterns] = React.useState('');
+
+  React.useEffect(() => {
+    const fetchMoodData = async () => {
+      const res = await fetch(`/api/get-journal-entries?userId=${userId}`);
+      const json = await res.json();
+
+      if (json.success) {
+        const dailyData = json.entries.map(entry => ({
+          day: new Date(entry.created_at).toLocaleDateString('en-US', { weekday: 'short' }),
+          mood: moodLabelMap[entry.sentiment_label] || 3
+        }));
+
+        setWeeklyMoodData(dailyData);
+      }
+    };
+
+    const fetchAIInsights = async () => {
+      const res = await fetch(`/api/get-ai-insights?userId=${userId}`);
+      const json = await res.json();
+
+      if (json.success && json.insights.length > 0) {
+        const latest = json.insights[0];
+
+        setAiInsight(latest.insight);
+        setAiExplanation(latest.explanation);
+        setAiPatterns(latest.patterns);
+
+        const suggestionsFormatted = (latest.suggestions || []).map((text, index) => ({
+          id: index + 1,
+          title: `Suggestion ${index + 1}`,
+          description: text,
+          icon: <Heart className="w-5 h-5" />,
+          category: 'AI Tip',
+          rating: null
+        }));
+
+        setSuggestions(suggestionsFormatted);
+      }
+    };
+
+    if (userId) {
+      fetchMoodData();
+      fetchAIInsights();
+    }
+  }, [userId]);
 
   const rateSuggestion = (suggestionId, rating) => {
-    setSuggestions(prev => 
-      prev.map(suggestion => 
-        suggestion.id === suggestionId 
+    setSuggestions(prev =>
+      prev.map(suggestion =>
+        suggestion.id === suggestionId
           ? { ...suggestion, rating }
           : suggestion
       )
@@ -87,76 +78,93 @@ const Insights = ({ userId }) => {
   };
 
   const moodFormatter = (value) => {
-    const moodMap = {
-      1: '🙁 Negative',
-      2: '😐 Neutral',
-      3: '🙂 Positive',
-      4: '😊 Very Positive'
+    const reverseMoodMap = {
+      1: '🙁 Very Negative',
+      2: '😕 Negative',
+      3: '😐 Neutral',
+      4: '🙂 Positive',
+      5: '😄 Very Positive'
     };
-    return moodMap[value] || value;
+    return reverseMoodMap[value] || value;
   };
+
+  const personalizedRecommendations = [
+    {
+      id: 1,
+      title: 'Gratitude Journaling',
+      description: 'Based on your positive weekend moods, try writing down 3 things you\'re grateful for each morning.',
+      icon: <BookOpen className="w-6 h-6" />,
+      type: 'Activity',
+      difficulty: 'Easy'
+    },
+    {
+      id: 2,
+      title: 'Stress-Relief Playlist',
+      description: 'Create a calming playlist for your challenging midweek days.',
+      icon: <Music className="w-6 h-6" />,
+      type: 'Resource',
+      difficulty: 'Easy'
+    },
+    {
+      id: 3,
+      title: 'Weekly Goal Setting',
+      description: 'Set small, achievable goals each Monday to maintain motivation throughout the week.',
+      icon: <Target className="w-6 h-6" />,
+      type: 'Strategy',
+      difficulty: 'Medium'
+    }
+  ];
 
   return (
     <div className="w-full">
-      {/* Header */}
       <div className="p-5 lg:px-10 lg:py-5">
         <h1 className="text-2xl font-bold">🔍 Insights</h1>
-        <p className="text-md text-black/50">Discover patterns and get personalized recommendations for your mental wellness journey.</p>
+        <p className="text-md text-black/50">
+          Discover patterns and get personalized recommendations for your mental wellness journey.
+        </p>
       </div>
 
       <div className="grid gap-4 p-4 md:gap-6 lg:grid-cols-3 auto-rows-min">
         {/* Mood Pattern This Week */}
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
-            🏃 Mood Pattern This Week
-          </h2>
-          <div>
-            <div>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={weeklyMoodData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" />
-                  <YAxis 
-                    domain={[0, 5]} 
-                    ticks={[1, 2, 3, 4]}
-                    tickFormatter={moodFormatter}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [moodFormatter(value), 'Mood']}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="mood"
-                    stroke="#8884d8"
-                    strokeWidth={3}
-                    dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">🏃 Mood Pattern This Week</h2>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={weeklyMoodData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis
+                domain={[1, 5]}
+                ticks={[1, 2, 3, 4, 5]}
+                tickFormatter={moodFormatter}
+              />
+              <Tooltip formatter={(value) => [moodFormatter(value), 'Mood']} />
+              <Line
+                type="monotone"
+                dataKey="mood"
+                stroke="#8884d8"
+                strokeWidth={3}
+                dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
           <div className="mt-4">
             <h3 className="mb-2 text-sm font-semibold text-gray-700">Key Insights:</h3>
             <div className="space-y-1 text-xs text-gray-600">
-              <p>• Your mood tends to dip on Tuesday and Wednesday</p>
-              <p>• Weekend moods are consistently more positive</p>
-              <p>• Work-related stress appears to impact midweek wellness</p>
+              <p>• {aiInsight}</p>
+              <p>• {aiPatterns}</p>
+              <p>• {aiExplanation}</p>
             </div>
           </div>
         </div>
 
         {/* Suggestions */}
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
-            💡 Suggestions
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">💡 Suggestions</h2>
           <div className="space-y-4">
             {suggestions.map((suggestion) => (
               <div key={suggestion.id} className="p-3 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    {suggestion.icon}
-                  </div>
+                  <div className="p-2 bg-blue-100 rounded-lg">{suggestion.icon}</div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-gray-800">{suggestion.title}</h3>
                     <p className="mb-2 text-xs text-gray-600">{suggestion.description}</p>
@@ -169,8 +177,8 @@ const Insights = ({ userId }) => {
                   <button
                     onClick={() => rateSuggestion(suggestion.id, 'up')}
                     className={`p-1 rounded transition-colors ${
-                      suggestion.rating === 'up' 
-                        ? 'bg-green-100 text-green-600' 
+                      suggestion.rating === 'up'
+                        ? 'bg-green-100 text-green-600'
                         : 'text-gray-400 hover:text-green-600'
                     }`}
                   >
@@ -179,8 +187,8 @@ const Insights = ({ userId }) => {
                   <button
                     onClick={() => rateSuggestion(suggestion.id, 'down')}
                     className={`p-1 rounded transition-colors ${
-                      suggestion.rating === 'down' 
-                        ? 'bg-red-100 text-red-600' 
+                      suggestion.rating === 'down'
+                        ? 'bg-red-100 text-red-600'
                         : 'text-gray-400 hover:text-red-600'
                     }`}
                   >
@@ -194,9 +202,7 @@ const Insights = ({ userId }) => {
 
         {/* Video Section */}
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
-            🎬 Recommended for You
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">🎬 Recommended for You</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <iframe
@@ -231,16 +237,12 @@ const Insights = ({ userId }) => {
 
         {/* Just for You */}
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
-            ⭐ Just for You
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">⭐ Just for You</h2>
           <div className="space-y-4">
             {personalizedRecommendations.map((recommendation) => (
               <div key={recommendation.id} className="p-3 transition-colors border border-gray-200 rounded-lg hover:border-purple-300">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    {recommendation.icon}
-                  </div>
+                  <div className="p-2 bg-purple-100 rounded-lg">{recommendation.icon}</div>
                   <div className="flex-1">
                     <h3 className="mb-1 text-sm font-semibold text-gray-800">{recommendation.title}</h3>
                     <p className="mb-2 text-xs text-gray-600">{recommendation.description}</p>
@@ -248,13 +250,15 @@ const Insights = ({ userId }) => {
                       <span className="px-2 py-1 text-xs text-purple-700 bg-purple-100 rounded">
                         {recommendation.type}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        recommendation.difficulty === 'Easy' 
-                          ? 'bg-green-100 text-green-700'
-                          : recommendation.difficulty === 'Medium'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          recommendation.difficulty === 'Easy'
+                            ? 'bg-green-100 text-green-700'
+                            : recommendation.difficulty === 'Medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
                         {recommendation.difficulty}
                       </span>
                     </div>
@@ -270,31 +274,26 @@ const Insights = ({ userId }) => {
           </div>
         </div>
 
-        {/* Weekly Summary */}
+        {/* Weekly Wellness Summary */}
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-3 md:p-6 rounded-xl">
-          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">
-            📊 Weekly Wellness Summary
-          </h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 md:text-xl">📊 Weekly Wellness Summary</h2>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="p-4 rounded-lg bg-blue-50">
               <h3 className="mb-2 text-sm font-semibold text-blue-800">Mood Insights</h3>
               <p className="text-xs text-blue-700">
-                Your mood follows a clear pattern with midweek dips and weekend peaks. 
-                This suggests work-related stress may be impacting your overall wellness.
+                {aiInsight}
               </p>
             </div>
             <div className="p-4 rounded-lg bg-green-50">
               <h3 className="mb-2 text-sm font-semibold text-green-800">Strengths</h3>
               <p className="text-xs text-green-700">
-                You consistently bounce back from difficult days and maintain positive weekend moods. 
-                Your resilience is a key strength in your wellness journey.
+                You consistently bounce back from difficult days and maintain positive weekend moods.
               </p>
             </div>
             <div className="p-4 rounded-lg bg-purple-50">
               <h3 className="mb-2 text-sm font-semibold text-purple-800">Focus Areas</h3>
               <p className="text-xs text-purple-700">
-                Consider implementing stress-management techniques for Tuesday and Wednesday. 
-                Small changes to your midweek routine could significantly improve your overall mood.
+                Consider implementing stress-management techniques for Tuesday and Wednesday.
               </p>
             </div>
           </div>
