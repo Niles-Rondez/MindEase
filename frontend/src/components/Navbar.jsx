@@ -15,8 +15,8 @@ function Navbar({ userId, currentPage, onNavigate, onSignOut }) {
     // Navigation items
     const navItems = [
         { name: 'Dashboard', path: 'dashboard', icon: '' },
-        { name: 'Logbook', path: 'logbook', icon: '' },
-        { name: 'AI Insights', path: 'insights', icon: '' }
+        { name: 'AI Insights', path: 'insights', icon: '' },
+        { name: 'Logbook', path: 'logbook', icon: '' }
     ];
 
     // Close mobile menu when clicking outside
