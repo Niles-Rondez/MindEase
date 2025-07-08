@@ -49,35 +49,113 @@ export default function Dashboard({ userId }) {
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch AI insights on mount
+  // Fetch AI insights
   useEffect(() => {
     const fetchInsights = async () => {
+      setLoading(true);
+
       try {
-        const res = await fetch(`/api/ai-insights/route.ts?user_id=${userId}`);
-        const data = await res.json();
-        setAiInsights(data || []);
-        if (data.length > 0) {
-          const recs = data[0]?.today_recommendations || [];
-          setRecommendations(
-            recs.map((rec, index) => ({
-              ...rec,
-              id: index,
-              completed: false,
-            }))
-          );
+        const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("API response not OK:", res.status, text);
+          setAiInsights([]);
+          setRecommendations([]);
+          return;
         }
+
+        
+        const responseData = await res.json();
+
+        if (!Array.isArray(responseData)) {
+          console.error("Unexpected API response format: Expected an array, but received:", responseData);
+          setAiInsights([]);
+          setRecommendations([]);
+          return;
+        }
+
+        setAiInsights(responseData);
+
+        
+        if (responseData.length > 0) {
+          const todayInsight = responseData[0];
+          const recs = todayInsight?.today_recommendations;
+
+          if (Array.isArray(recs)) {
+            setRecommendations(
+              recs.map((rec, index) => ({
+                ...rec,
+                id: index,
+                completed: false,
+              }))
+            );
+          } else {
+            setRecommendations([]);
+          }
+        } else {
+          setRecommendations([]);
+        }
+
       } catch (err) {
         console.error("Error fetching AI insights:", err);
+        setAiInsights([]);
+        setRecommendations([]);
       } finally {
         setLoading(false);
       }
     };
 
-    if (userId) fetchInsights();
+    if (userId) {
+      fetchInsights();
+    } else {
+      setLoading(false);
+    }
   }, [userId]);
 
+  // Derive today's insight
   const todayInsight = aiInsights.length > 0 ? aiInsights[0] : null;
 
+  
+  const todaySummaryInsight = useMemo(() => {
+  if (todayInsight && typeof todayInsight.insight === 'string') {
+    try {
+      
+      let jsonString = todayInsight.insight
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+    
+      const parsedInsight = JSON.parse(jsonString);
+      
+      
+      if (parsedInsight.weekly_summary?.summary) {
+        return parsedInsight.weekly_summary.summary;
+      }
+      if (parsedInsight.summary) {
+        return parsedInsight.summary;
+      }
+      return "No detailed insight summary available.";
+    } catch (e) {
+      
+      if (todayInsight.insight.includes('weekly_summary') || 
+          todayInsight.insight.includes('summary')) {
+       
+        const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
+        if (summaryMatch) {
+          return summaryMatch[1];
+        }
+      }
+      console.warn("Failed to parse insight, showing raw content:", todayInsight.insight);
+      return todayInsight.insight; 
+    }
+  }
+  return "No insight available today.";
+}, [todayInsight]);
+
+
+  // Calculate mood data for chart
   const moodData = useMemo(() => {
     if (!todayInsight) return [];
     const actual = todayInsight.actual_mood || [];
@@ -107,8 +185,19 @@ export default function Dashboard({ userId }) {
   const completedCount = recommendations.filter((rec) => rec.completed).length;
   const totalCount = recommendations.length;
 
+ 
   if (loading) {
     return <p className="p-8 text-center text-gray-500">Loading insights...</p>;
+  }
+
+  
+  if (!todayInsight && !loading) {
+      return (
+          <div className="p-8 text-center text-gray-500">
+              <p>No daily insights available for this user yet.</p>
+              <p>Please ensure journal entries are present and insights are generated.</p>
+          </div>
+      );
   }
 
   return (
@@ -272,7 +361,8 @@ export default function Dashboard({ userId }) {
                     Today's Insight
                   </h3>
                   <p className="text-xs text-purple-700">
-                    {todayInsight?.insight || "No insight available today."}
+                    {/* Use the new parsed insight here */}
+                    {todaySummaryInsight}
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-50">
