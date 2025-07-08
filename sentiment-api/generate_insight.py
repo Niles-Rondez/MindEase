@@ -221,4 +221,3 @@ async def generate_insight(user_id: str = Query(...)):
     except Exception as e:
         print(f"ERROR: An exception occurred in generate_insight: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
-
