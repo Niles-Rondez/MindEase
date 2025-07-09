@@ -130,31 +130,28 @@ const Insights = ({ userId }) => {
   };
 
   const weeklyMoodData = useMemo(() => {
-   
-    const actualMoods = insight?.trend_analysis?.actual_mood || [];
-    const predictedMoods = insight?.trend_analysis?.predicted_mood || [];
+  const actualMoods = insight?.trend_analysis?.actual_mood || [];
+  const predictedMoods = insight?.trend_analysis?.predicted_mood || [];
 
-    const allDays = [...new Set([
-      ...actualMoods.map(a => a.day),
-      ...predictedMoods.map(p => p.day)
-    ])];
+  // Collect unique dates from actual + predicted
+  const allDates = [...new Set([
+    ...actualMoods.map(a => a.date),
+    ...predictedMoods.map(p => p.date)
+  ])];
 
-    return allDays.map(day => {
-      const actual = actualMoods.find(a => a.day === day);
-      const predicted = predictedMoods.find(p => p.day === day);
-      return {
-        day,
-        mood: actual?.mood ?? null,
-        energy: actual?.energy ?? null,
-        stress: actual?.stress ?? null, 
-        predictedMood: predicted?.mood ?? null 
-      };
-    }).sort((a, b) => {
-      
-        const daysOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        return daysOrder.indexOf(a.day) - daysOrder.indexOf(b.day);
-    });
-  }, [insight]);
+  return allDates.map(date => {
+    const actual = actualMoods.find(a => a.date === date);
+    const predicted = predictedMoods.find(p => p.date === date);
+    return {
+      date,
+      mood: actual?.mood ?? null,
+      energy: actual?.energy ?? null,
+      stress: actual?.stress ?? null,
+      predictedMood: predicted?.mood ?? null
+    };
+  }).sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by actual date
+}, [insight]);
+
 
   const monthlyTrendData = useMemo(() => {
     return [
@@ -271,7 +268,7 @@ const Insights = ({ userId }) => {
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={weeklyMoodData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" />
+              <XAxis dataKey="date" />
               <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4]} tickFormatter={moodFormatter} />
               <Tooltip formatter={(value, name) => {
                 if (name === 'mood') return [moodFormatter(value), 'Mood'];

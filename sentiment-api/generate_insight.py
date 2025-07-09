@@ -16,8 +16,6 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_
 
 app = FastAPI()
 
-
-
 def fetch_recent_journals(user_id: str):
     response = supabase.table("journal_entries") \
         .select("*") \
@@ -31,12 +29,14 @@ def analyze_entries(entries):
     texts = [entry["entry_text"] for entry in entries]
     full_text = "\n\n".join(texts)
 
-   
     prompt = f"""
 IMPORTANT: Your response MUST be a strict JSON object. Do NOT include any comments, trailing commas, or extra text outside the JSON. All keys MUST be double-quoted.
 
 Analyze the following journal entries to provide a comprehensive wellness insight.
 Ensure all fields in the example JSON structure are populated, even if with default or "N/A" values if specific data is not available from the entries.
+You are provided with journal entries and their exact dates. Only include mood data (actual and predicted) for the dates that match the journal entries provided. Do NOT invent or extend dates beyond what's in the input.
+
+Include a `date` field in each mood object using format YYYY-MM-DD from journal `created_at`.
 
 ```json
 {{
@@ -47,22 +47,12 @@ Ensure all fields in the example JSON structure are populated, even if with defa
   "trend_analysis": {{
     "trend": "Mood improved midweek after a low start.",
     "actual_mood": [
-      {{ "day": "Mon", "mood": 2 }},
-      {{ "day": "Tue", "mood": 2 }},
-      {{ "day": "Wed", "mood": 1 }},
-      {{ "day": "Thu", "mood": 1 }},
-      {{ "day": "Fri", "mood": 2 }},
-      {{ "day": "Sat", "mood": 4 }},
-      {{ "day": "Sun", "mood": 3 }}
+      {{ "date": "2025-07-07", "mood": 2 }},
+      {{ "date": "2025-07-08", "mood": 3 }}
     ],
     "predicted_mood": [
-      {{ "day": "Mon", "mood": 3.2 }},
-      {{ "day": "Tue", "mood": 2.8 }},
-      {{ "day": "Wed", "mood": 2.5 }},
-      {{ "day": "Thu", "mood": 2.2 }},
-      {{ "day": "Fri", "mood": 3.0 }},
-      {{ "day": "Sat", "mood": 3.8 }},
-      {{ "day": "Sun", "mood": 3.5 }}
+      {{ "date": "2025-07-07", "mood": 2.5 }},
+      {{ "date": "2025-07-08", "mood": 3.2 }}
     ]
   }},
   "today_affirmation": "I am capable of navigating life with calm and clarity.",
@@ -76,23 +66,12 @@ Ensure all fields in the example JSON structure are populated, even if with defa
       "type": "Wellness",
       "timeEstimate": "10 min",
       "completed": false
-    }},
-    {{
-      "title": "Midday Check-in",
-      "description": "Reflect on your mood and energy levels",
-      "priority": "medium",
-      "type": "Routine",
-      "timeEstimate": "5 min",
-      "completed": false
     }}
   ],
-  "suggestions": [
-    "Stick to your morning routine to improve consistency.",
-    "Consider journaling at the same time each day."
-  ],
-  "mood_triggers": ["lack of sleep", "social interactions"],
-  "mood_improvement_tips": ["go for a walk", "hydrate", "take 5-minute breaks"],
-  "positive_patterns": ["consistent writing", "self-reflection"],
+  "suggestions": ["Stick to your morning routine."],
+  "mood_triggers": ["lack of sleep"],
+  "mood_improvement_tips": ["go for a walk"],
+  "positive_patterns": ["consistent writing"],
   "confidence_score": 0.91
 }}
 ```
@@ -109,13 +88,11 @@ def parse_response(text):
         print("🔍 Raw Gemini response (before parsing):")
         print(text)
 
-        
         if "```json" in text:
             content = text.split("```json")[1].split("```")[0].strip()
         else:
             content = text.strip()
 
-        # Attempt to load JSON
         parsed_json = json.loads(content)
         print("✅ Successfully parsed Gemini response.")
         return parsed_json
@@ -158,19 +135,8 @@ def parse_response(text):
             "positive_patterns": [],
         }
 
-
 def store_ai_insight(user_id, journal_id, parsed):
-  
     print(f"DEBUG: Storing insight for user_id: {user_id}, journal_id: {journal_id}")
-    print(f"DEBUG: Insight summary: {parsed.get('weekly_summary', {}).get('summary', 'N/A')}")
-    print(f"DEBUG: Today Affirmation: {parsed.get('today_affirmation', 'N/A')}")
-    print(f"DEBUG: Quick Tip: {parsed.get('quick_tip', 'N/A')}")
-    print(f"DEBUG: Prediction Accuracy: {parsed.get('prediction_accuracy', 'N/A')}")
-    print(f"DEBUG: Today Recommendations: {parsed.get('today_recommendations', 'N/A')}")
-    print(f"DEBUG: Actual Mood: {parsed.get('trend_analysis', {}).get('actual_mood', 'N/A')}")
-    print(f"DEBUG: Predicted Mood: {parsed.get('trend_analysis', {}).get('predicted_mood', 'N/A')}")
-
-
     supabase.table("ai_insights").insert({
         "user_id": user_id,
         "journal_id": journal_id,
@@ -185,15 +151,13 @@ def store_ai_insight(user_id, journal_id, parsed):
         "predicted_mood": parsed.get("trend_analysis", {}).get("predicted_mood"),
         "weekly_summary": parsed.get("weekly_summary"),
         "trend_analysis": parsed.get("trend_analysis"),
-        "day": datetime.utcnow().strftime("%a"), 
+        "day": datetime.utcnow().strftime("%a") 
     }).execute()
-
 
 @app.get("/generate-insight")
 async def generate_insight(user_id: str = Query(...)):
     try:
         entries = fetch_recent_journals(user_id)
-
         if not entries:
             print(f"DEBUG: No journal entries found for user_id: {user_id}")
             return JSONResponse(status_code=404, content={"error": "No journal entries found."})
@@ -201,12 +165,10 @@ async def generate_insight(user_id: str = Query(...)):
         ai_response = analyze_entries(entries)
         parsed = parse_response(ai_response)
 
-
         if "⚠️ Invalid JSON returned by Gemini" in parsed.get("weekly_summary", {}).get("summary", ""):
             print("DEBUG: Not storing insight due to invalid JSON from Gemini.")
             return JSONResponse(status_code=500, content={"error": "AI response was invalid JSON."})
 
-      
         most_recent_journal_id = entries[0]["id"] if entries else None
         if most_recent_journal_id:
             store_ai_insight(user_id, most_recent_journal_id, parsed)

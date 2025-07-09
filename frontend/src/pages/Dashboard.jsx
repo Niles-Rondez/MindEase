@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import RecommendationModal from "../components/RecommendationModal";
 
-// Utility functions
 const moodFormatter = (value) => {
   const moodMap = {
     1: "🙁 Negative",
@@ -49,7 +48,6 @@ export default function Dashboard({ userId }) {
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch AI insights
   useEffect(() => {
     const fetchInsights = async () => {
       setLoading(true);
@@ -64,7 +62,6 @@ export default function Dashboard({ userId }) {
           setRecommendations([]);
           return;
         }
-
         
         const responseData = await res.json();
 
@@ -76,7 +73,6 @@ export default function Dashboard({ userId }) {
         }
 
         setAiInsights(responseData);
-
         
         if (responseData.length > 0) {
           const todayInsight = responseData[0];
@@ -113,61 +109,79 @@ export default function Dashboard({ userId }) {
     }
   }, [userId]);
 
-  // Derive today's insight
   const todayInsight = aiInsights.length > 0 ? aiInsights[0] : null;
-
   
   const todaySummaryInsight = useMemo(() => {
-  if (todayInsight && typeof todayInsight.insight === 'string') {
-    try {
-      
-      let jsonString = todayInsight.insight
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
-
-    
-      const parsedInsight = JSON.parse(jsonString);
-      
-      
-      if (parsedInsight.weekly_summary?.summary) {
-        return parsedInsight.weekly_summary.summary;
-      }
-      if (parsedInsight.summary) {
-        return parsedInsight.summary;
-      }
-      return "No detailed insight summary available.";
-    } catch (e) {
-      
-      if (todayInsight.insight.includes('weekly_summary') || 
-          todayInsight.insight.includes('summary')) {
-       
-        const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
-        if (summaryMatch) {
-          return summaryMatch[1];
+    if (todayInsight && typeof todayInsight.insight === 'string') {
+      try {
+        let jsonString = todayInsight.insight
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
+        
+        const parsedInsight = JSON.parse(jsonString);
+        
+        if (parsedInsight.weekly_summary?.summary) {
+          return parsedInsight.weekly_summary.summary;
         }
+        if (parsedInsight.summary) {
+          return parsedInsight.summary;
+        }
+        return "No detailed insight summary available.";
+      } catch (e) {
+        if (todayInsight.insight.includes('weekly_summary') || 
+            todayInsight.insight.includes('summary')) {
+          const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
+          if (summaryMatch) {
+            return summaryMatch[1];
+          }
+        }
+        console.warn("Failed to parse insight, showing raw content:", todayInsight.insight);
+        return todayInsight.insight; 
       }
-      console.warn("Failed to parse insight, showing raw content:", todayInsight.insight);
-      return todayInsight.insight; 
     }
-  }
-  return "No insight available today.";
+    return "No insight available today.";
+  }, [todayInsight]);
+  
+  const moodData = useMemo(() => {
+  if (
+    !todayInsight ||
+    !Array.isArray(todayInsight.actual_mood) ||
+    !Array.isArray(todayInsight.predicted_mood)
+  )
+    return [];
+
+  const actualMoods = todayInsight.actual_mood;
+  const predictedMoods = todayInsight.predicted_mood;
+
+  const allDates = {};
+
+  actualMoods.forEach((entry) => {
+    allDates[entry.date] = {
+      date: entry.date,
+      actualMood: entry.mood,
+      predictedMood: null,
+    };
+  });
+
+  predictedMoods.forEach((entry) => {
+    if (allDates[entry.date]) {
+      allDates[entry.date].predictedMood = entry.mood;
+    } else {
+      allDates[entry.date] = {
+        date: entry.date,
+        actualMood: null,
+        predictedMood: entry.mood,
+      };
+    }
+  });
+
+  // Sort by date ascending
+  return Object.values(allDates).sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
 }, [todayInsight]);
 
-
-  // Calculate mood data for chart
-  const moodData = useMemo(() => {
-    if (!todayInsight) return [];
-    const actual = todayInsight.actual_mood || [];
-    const predicted = todayInsight.predicted_mood || [];
-    const allDays = [...new Set([...actual.map(a => a.day), ...predicted.map(p => p.day)])];
-
-    return allDays.map(day => ({
-      day,
-      actualMood: actual.find(a => a.day === day)?.mood ?? null,
-      predictedMood: predicted.find(p => p.day === day)?.mood ?? null,
-    }));
-  }, [todayInsight]);
 
   const handleRecommendationClick = (recommendation) => {
     setSelectedRecommendation(recommendation);
@@ -185,17 +199,15 @@ export default function Dashboard({ userId }) {
   const completedCount = recommendations.filter((rec) => rec.completed).length;
   const totalCount = recommendations.length;
 
- 
   if (loading) {
     return <p className="p-8 text-center text-gray-500">Loading insights...</p>;
   }
-
   
   if (!todayInsight && !loading) {
       return (
           <div className="p-8 text-center text-gray-500">
-              <p>No daily insights available for this user yet.</p>
-              <p>Please ensure journal entries are present and insights are generated.</p>
+            <p>No daily insights available for this user yet.</p>
+            <p>Please ensure journal entries are present and insights are generated.</p>
           </div>
       );
   }
@@ -212,7 +224,6 @@ export default function Dashboard({ userId }) {
           </div>
 
           <div className="grid gap-4 p-4 md:gap-6 lg:grid-cols-3 auto-rows-min">
-            {/* Today’s Progress */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-plum-100">
@@ -304,7 +315,6 @@ export default function Dashboard({ userId }) {
               </div>
             </div>
 
-            {/* Mood Chart */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl lg:col-span-2">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-lilac-100">
@@ -323,7 +333,7 @@ export default function Dashboard({ userId }) {
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={moodData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="day" />
+                  <XAxis dataKey="date" />
                   <YAxis
                     domain={[0, 5]}
                     ticks={[1, 2, 3, 4]}
@@ -361,7 +371,6 @@ export default function Dashboard({ userId }) {
                     Today's Insight
                   </h3>
                   <p className="text-xs text-purple-700">
-                    {/* Use the new parsed insight here */}
                     {todaySummaryInsight}
                   </p>
                 </div>
@@ -378,7 +387,6 @@ export default function Dashboard({ userId }) {
               </div>
             </div>
 
-            {/* AI Wellness Companion */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl lg:col-span-3">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-green-100 rounded-lg">
