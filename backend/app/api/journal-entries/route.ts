@@ -106,13 +106,47 @@ export async function POST(request: NextRequest) {
     let insightsData: any = null;
     let pythonErrorOutput = '';
 
+    // --- START MODIFIED SECTION: Fetch recent entries for AI analysis ---
+    const NUM_RECENT_ENTRIES_FOR_AI = 5; // You can adjust this number as needed
+
+    console.log(`[Insight Generation] Fetching last ${NUM_RECENT_ENTRIES_FOR_AI} journal entries for user ${userId}...`);
+    const { data: recentEntries, error: fetchRecentError } = await supabaseAdmin
+      .from('journal_entries')
+      .select('entry_text, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }) // Get most recent first
+      .limit(NUM_RECENT_ENTRIES_FOR_AI);
+
+    let consolidatedJournalText = '';
+    if (fetchRecentError) {
+      console.error('[Supabase Fetch Recent Entries Error]', fetchRecentError);
+      // Fallback: If fetching fails, still process just the new entry
+      consolidatedJournalText = newJournalEntry.entry_text;
+      console.warn('[Insight Generation] Falling back to analyzing only the new entry due to fetch error.');
+    } else if (recentEntries && recentEntries.length > 0) {
+      // Sort in ascending order (oldest to newest) for prompt clarity
+      const sortedEntries = recentEntries.sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
+
+      consolidatedJournalText = sortedEntries.map(entry => {
+        const date = entry.created_at ? new Date(entry.created_at).toISOString().split('T')[0] : 'Unknown Date';
+        return `--- ENTRY (${date}) ---\n${entry.entry_text}`;
+      }).join('\n\n');
+      console.log(`[Insight Generation] Consolidated ${sortedEntries.length} entries for AI analysis.`);
+    } else {
+      // If no other entries exist, just use the new one (though new entry is always included in the fetch)
+      consolidatedJournalText = newJournalEntry.entry_text;
+      console.log('[Insight Generation] No previous entries found, analyzing only the new entry.');
+    }
+    // --- END MODIFIED SECTION ---
+
     const pythonScriptPath = path.join(process.cwd(), 'scripts', 'generate_insight.py');
     console.log(`[Insight Generation] Attempting to run Python script at: ${pythonScriptPath}`);
 
+    // Pass the consolidated text to the Python script
     const pythonProcess = spawn('python', [
       pythonScriptPath,
-      newJournalEntry.id,
-      entryText
+      newJournalEntry.id, // Still pass entry_id, even if Python doesn't use it for analysis
+      consolidatedJournalText // Pass the combined text
     ]);
 
     pythonProcess.stdout.on('data', (data) => {

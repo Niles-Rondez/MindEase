@@ -11,60 +11,112 @@ import {
 import RecommendationModal from '../components/RecommendationModal';
 
 const Insights = ({ userId }) => {
-  const [insights, setInsights] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Separate states for AI insights and raw journal entries
+  const [aiInsights, setAiInsights] = useState([]);
+  const [journalEntries, setJournalEntries] = useState([]); // New state for journal entries graph
+  const [loadingAiInsights, setLoadingAiInsights] = useState(true);
+  const [loadingJournalEntries, setLoadingJournalEntries] = useState(true); // New loading state
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
- 
+  // Helper to convert string mood rating (from get-journal-entries) to a numeric value (1-5)
+  const getNumericMood = (moodString) => {
+    switch (moodString) {
+      case 'Red': return 1;      // Very Sad
+      case 'Orange': return 2;   // Sad
+      case 'Yellow': return 3;   // Neutral
+      case 'Green': return 4;    // Happy
+      case 'Blue': return 5;     // Very Happy
+      default: return null;
+    }
+  };
+
+  // --- Fetch AI Insights (for patterns and general insight) ---
   useEffect(() => {
-    const fetchInsights = async () => {
-      setLoading(true); 
+    const fetchAiInsights = async () => {
+      setLoadingAiInsights(true);
       try {
-       
         const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
-        
+
         if (!res.ok) {
           const text = await res.text();
           console.error("Failed to load AI insights: HTTP", res.status, text);
-          setInsights([]); 
+          setAiInsights([]);
           return;
         }
 
-        
         const data = await res.json();
-        console.log("Fetched AI Insights Data:", data); 
+        console.log("Fetched AI Insights Data:", data);
 
         if (!Array.isArray(data)) {
           console.error("AI Insights API returned non-array data:", data);
-          setInsights([]);
+          setAiInsights([]);
           return;
         }
-        setInsights(data); 
+        setAiInsights(data);
 
       } catch (err) {
         console.error("Error fetching AI insights:", err);
-        setInsights([]); 
+        setAiInsights([]);
       } finally {
-        setLoading(false); 
+        setLoadingAiInsights(false);
       }
     };
 
     if (userId) {
-      fetchInsights();
+      fetchAiInsights();
     } else {
-      setLoading(false); 
+      setLoadingAiInsights(false);
     }
   }, [userId]);
 
-  
+  // --- Fetch Journal Entries (specifically for the graph) ---
+  useEffect(() => {
+    const fetchJournalEntries = async () => {
+      setLoadingJournalEntries(true);
+      try {
+        // Fetch a reasonable number of entries for the graph (e.g., last 30)
+        const res = await fetch(`http://localhost:3000/api/get-journal-entries?userId=${userId}&limit=30`);
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Failed to load journal entries for graph: HTTP", res.status, text);
+          setJournalEntries([]);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Fetched Journal Entries for Graph:", data);
+
+        if (!data.success || !Array.isArray(data.entries)) {
+          console.error("Journal Entries API returned unexpected data structure:", data);
+          setJournalEntries([]);
+          return;
+        }
+        setJournalEntries(data.entries); // Set the journal entries for the graph
+
+      } catch (err) {
+        console.error("Error fetching journal entries for graph:", err);
+        setJournalEntries([]);
+      } finally {
+        setLoadingJournalEntries(false);
+      }
+    };
+
+    if (userId) {
+      fetchJournalEntries();
+    } else {
+      setLoadingJournalEntries(false);
+    }
+  }, [userId]);
+
+  // --- Fetch Recommendations ---
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
-       
         const res = await fetch(`http://localhost:3000/api/recommendations?userId=${userId}`);
-        
+
         if (!res.ok) {
           const text = await res.text();
           console.error("Failed to load recommendations: HTTP", res.status, text);
@@ -73,7 +125,7 @@ const Insights = ({ userId }) => {
         }
 
         const data = await res.json();
-        console.log("Fetched Recommendations Data:", data); 
+        console.log("Fetched Recommendations Data:", data);
 
         if (!Array.isArray(data)) {
           console.error("Recommendations API returned non-array data:", data);
@@ -91,16 +143,18 @@ const Insights = ({ userId }) => {
     if (userId) fetchRecommendations();
   }, [userId]);
 
-  
-  const insight = insights[0] || {};
-  console.log("Current main insight object:", insight);
+  // Use aiInsights for the main insight object that feeds patterns
+  const insight = aiInsights[0] || {};
+  console.log("Current main AI insight object:", insight);
 
+  // Mood formatter for the Y-Axis and Tooltip, consistent with 1-5 numeric scale
   const moodFormatter = (value) => {
     const map = {
-      1: '🙁 Negative',
-      2: '😐 Neutral',
-      3: '🙂 Positive',
-      4: '😊 Very Positive'
+      1: '😢 Very Sad',
+      2: '😕 Sad',
+      3: '😐 Neutral',
+      4: '😊 Happy',
+      5: '😄 Very Happy'
     };
     return map[value] || value;
   };
@@ -115,7 +169,6 @@ const Insights = ({ userId }) => {
   };
 
   const rateRecommendation = (recommendationId, rating) => {
-   
     console.log(`Rating recommendation ${recommendationId} as ${rating}`);
     setRecommendations(prev =>
       prev.map(rec =>
@@ -129,30 +182,48 @@ const Insights = ({ userId }) => {
     setIsModalOpen(true);
   };
 
+  // Memoized data for the Weekly Mood Chart, now using `journalEntries`
   const weeklyMoodData = useMemo(() => {
-  const actualMoods = insight?.trend_analysis?.actual_mood || [];
-  const predictedMoods = insight?.trend_analysis?.predicted_mood || [];
+    if (!journalEntries || journalEntries.length === 0) return [];
 
-  // Collect unique dates from actual + predicted
-  const allDates = [...new Set([
-    ...actualMoods.map(a => a.date),
-    ...predictedMoods.map(p => p.date)
-  ])];
+    const dailyDataMap = new Map();
 
-  return allDates.map(date => {
-    const actual = actualMoods.find(a => a.date === date);
-    const predicted = predictedMoods.find(p => p.date === date);
-    return {
-      date,
-      mood: actual?.mood ?? null,
-      energy: actual?.energy ?? null,
-      stress: actual?.stress ?? null,
-      predictedMood: predicted?.mood ?? null
-    };
-  }).sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by actual date
-}, [insight]);
+    journalEntries.forEach(entry => {
+      const date = entry.date; // `date` is already in 'YYYY-MM-DD' format from get-journal-entries' transformedEntries
+      const numericMood = getNumericMood(entry.mood_rating);
 
+      if (!dailyDataMap.has(date)) {
+        dailyDataMap.set(date, {
+          date,
+          totalMood: 0,
+          moodCount: 0,
+          energy: null,    // Not available from get-journal-entries
+          stress: null,    // Not available from get-journal-entries
+          predictedMood: null // Not available from get-journal-entries
+        });
+      }
 
+      const dailyEntry = dailyDataMap.get(date);
+      if (numericMood !== null) {
+        dailyEntry.totalMood += numericMood;
+        dailyEntry.moodCount += 1;
+      }
+    });
+
+    // Calculate average mood for each day and sort by date
+    const chartData = Array.from(dailyDataMap.values()).map(dailyEntry => ({
+      date: dailyEntry.date,
+      // Calculate average mood if there are multiple entries for a day, rounded to 1 decimal
+      mood: dailyEntry.moodCount > 0 ? parseFloat((dailyEntry.totalMood / dailyEntry.moodCount).toFixed(1)) : null,
+      energy: dailyEntry.energy,
+      stress: dailyEntry.stress,
+      predictedMood: dailyEntry.predictedMood
+    })).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return chartData;
+  }, [journalEntries]); // Dependency changed to `journalEntries`
+
+  // Monthly Trend Data (currently hardcoded as per original)
   const monthlyTrendData = useMemo(() => {
     return [
       { week: 'Week 1', avgMood: 3.5, consistency: 70 },
@@ -162,10 +233,10 @@ const Insights = ({ userId }) => {
     ];
   }, []);
 
+  // Mood Pattern Insights (still uses `insight` from AI insights)
   const moodPatternInsights = useMemo(() => {
     const patterns = [];
 
-   
     if (Array.isArray(insight?.positive_patterns)) {
       insight.positive_patterns.forEach(pattern => {
         patterns.push({
@@ -177,7 +248,6 @@ const Insights = ({ userId }) => {
       });
     }
 
-    
     if (Array.isArray(insight?.mood_triggers)) {
       insight.mood_triggers.forEach(trigger => {
         patterns.push({
@@ -189,7 +259,6 @@ const Insights = ({ userId }) => {
       });
     }
 
-    
     if (Array.isArray(insight?.mood_improvement_tips)) {
       insight.mood_improvement_tips.forEach(tip => {
         patterns.push({
@@ -201,7 +270,6 @@ const Insights = ({ userId }) => {
       });
     }
 
-   
     if (Array.isArray(insight?.suggestions)) {
       insight.suggestions.forEach(suggestion => {
         patterns.push({
@@ -213,16 +281,14 @@ const Insights = ({ userId }) => {
       });
     }
 
-  
     if (typeof insight?.insight === 'string' && !insight?.insight.startsWith('```json')) {
-        patterns.push({
-            title: "General Insight",
-            description: insight.insight,
-            color: 'bg-purple-50',
-            textColor: 'text-purple-700'
-        });
+      patterns.push({
+        title: "General Insight",
+        description: insight.insight,
+        color: 'bg-purple-50',
+        textColor: 'text-purple-700'
+      });
     }
-
 
     return patterns.length > 0 ? patterns : [
       {
@@ -232,16 +298,18 @@ const Insights = ({ userId }) => {
         textColor: 'text-gray-700'
       }
     ];
-  }, [insight]);
+  }, [insight]); // Dependency remains `insight`
 
+  // Combine loading states
+  if (loadingAiInsights || loadingJournalEntries) {
+    return <div className="p-10 text-center">Loading insights...</div>;
+  }
 
-  if (loading) return <div className="p-10 text-center">Loading insights...</div>;
-
- 
-  if (insights.length === 0 && !loading) {
+  // Display message if no data is available
+  if (aiInsights.length === 0 && journalEntries.length === 0) {
     return (
       <div className="p-10 text-center text-gray-500">
-        <p>No insights available yet.</p>
+        <p>No insights or journal entries available yet.</p>
         <p>Please ensure you have journal entries and AI insights are being generated.</p>
       </div>
     );
@@ -260,8 +328,8 @@ const Insights = ({ userId }) => {
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-plum-100"><Calendar className="w-5 h-5 text-plum-600" /></div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Mood & Energy Patterns</h2>
-              <p className="text-sm text-gray-600">Track correlations between mood, energy, and stress levels</p>
+              <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Mood Patterns</h2> {/* Renamed to reflect available data */}
+              <p className="text-sm text-gray-600">Track your mood levels over time</p>
             </div>
           </div>
 
@@ -269,26 +337,48 @@ const Insights = ({ userId }) => {
             <LineChart data={weeklyMoodData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" />
-              <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4]} tickFormatter={moodFormatter} />
+              {/* YAxis now uses 1-5 domain and ticks, matching getNumericMood and moodFormatter */}
+              <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} tickFormatter={moodFormatter} />
               <Tooltip formatter={(value, name) => {
                 if (name === 'mood') return [moodFormatter(value), 'Mood'];
+                // Energy, Stress, and Predicted Mood are not in get-journal-entries, so they won't show
                 if (name === 'energy') return [value !== null ? value.toFixed(1) : 'N/A', 'Energy'];
                 if (name === 'stress') return [value !== null ? value.toFixed(1) : 'N/A', 'Stress'];
+                if (name === 'predictedMood') return [moodFormatter(value), 'AI Predicted Mood'];
                 return [value, name];
               }} />
-              <Line type="monotone" dataKey="mood" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: '#8b5cf6', r: 5 }} name="Mood" />
-              {/* Only render energy/stress lines if data is expected to be present */}
+              <Line
+                type="monotone"
+                dataKey="mood" // Uses the calculated average mood from journal entries
+                stroke="#8b5cf6"
+                strokeWidth={3}
+                dot={{ fill: '#8b5cf6', r: 5 }}
+                name="Mood"
+              />
+              {/* These lines are kept but will only render if energy/stress/predictedMood data becomes available
+                  from journal entries or is merged from AI insights. Currently, get-journal-entries doesn't provide them. */}
               {weeklyMoodData.some(d => d.energy !== null) && (
                 <Line type="monotone" dataKey="energy" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} name="Energy" />
               )}
               {weeklyMoodData.some(d => d.stress !== null) && (
                 <Line type="monotone" dataKey="stress" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} name="Stress" />
               )}
+              {weeklyMoodData.some(d => d.predictedMood !== null) && (
+                <Line
+                  type="monotone"
+                  dataKey="predictedMood"
+                  stroke="#c084fc"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ fill: '#c084fc', r: 4 }}
+                  name="AI Predicted Mood"
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Pattern Insights */}
+        {/* Pattern Insights (remains dependent on AI insights) */}
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-lilac-100"><Brain className="w-5 h-5 text-lilac-600" /></div>
@@ -299,10 +389,10 @@ const Insights = ({ userId }) => {
           </div>
 
           <div className="space-y-3">
-            {moodPatternInsights.map((item, index) => ( 
+            {moodPatternInsights.map((item, index) => (
               <div key={index} className={`p-3 border rounded-lg ${item.color}`}>
                 <div className="flex items-start gap-2">
-                  <Lightbulb className={`w-4 h-4 ${item.textColor}`} /> {/* Icon color from text color */}
+                  <Lightbulb className={`w-4 h-4 ${item.textColor}`} />
                   <div className="flex-1">
                     <h3 className={`text-sm font-semibold ${item.textColor}`}>{item.title}</h3>
                     <p className={`text-xs mt-1 ${item.textColor}`}>{item.description}</p>
@@ -313,7 +403,7 @@ const Insights = ({ userId }) => {
           </div>
         </div>
 
-        {/* Monthly Trends */}
+        {/* Monthly Trends (remains hardcoded) */}
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
@@ -335,7 +425,7 @@ const Insights = ({ userId }) => {
           </ResponsiveContainer>
         </div>
 
-        {/* Weekly Recommendations */}
+        {/* Weekly Recommendations (remains dependent on recommendations API) */}
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-yellow-100 rounded-lg"><Target className="w-5 h-5 text-yellow-600" /></div>
@@ -354,8 +444,7 @@ const Insights = ({ userId }) => {
               >
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-plum-100">
-                    {/* You might want to map specific icons based on rec.type or rec.category */}
-                    {rec.icon || <Clock className="w-5 h-5 text-plum-600" />} 
+                    {rec.icon || <Clock className="w-5 h-5 text-plum-600" />}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-gray-800">{rec.title}</h3>

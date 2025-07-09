@@ -18,12 +18,25 @@ import {
 } from "lucide-react";
 import RecommendationModal from "../components/RecommendationModal";
 
+const colorToNumericMood = (color) => {
+  switch (color) {
+    case 'Red': return 1;
+    case 'Orange': return 2;
+    case 'Yellow': return 3;
+    case 'Green': return 4;
+    case 'Blue': return 5;
+    default: return null;
+  }
+};
+
+
 const moodFormatter = (value) => {
   const moodMap = {
-    1: "🙁 Negative",
-    2: "😐 Neutral",
-    3: "🙂 Positive",
-    4: "😊 Very Positive",
+    1: "🙁 Very Sad",
+    2: "😕 Sad",
+    3: "😐 Neutral",
+    4: "😊 Happy",
+    5: "😄 Very Happy",
   };
   return moodMap[value] || value;
 };
@@ -43,59 +56,69 @@ const getPriorityColor = (priority) => {
 
 export default function Dashboard({ userId }) {
   const [aiInsights, setAiInsights] = useState([]);
+  const [journalEntries, setJournalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchInsights = async () => {
+    const fetchData = async () => {
       setLoading(true);
 
       try {
-        const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
-
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("API response not OK:", res.status, text);
+        const insightsRes = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
+        if (!insightsRes.ok) {
+          const text = await insightsRes.text();
+          console.error("AI Insights API response not OK:", insightsRes.status, text);
           setAiInsights([]);
-          setRecommendations([]);
-          return;
-        }
-        
-        const responseData = await res.json();
-
-        if (!Array.isArray(responseData)) {
-          console.error("Unexpected API response format: Expected an array, but received:", responseData);
-          setAiInsights([]);
-          setRecommendations([]);
-          return;
-        }
-
-        setAiInsights(responseData);
-        
-        if (responseData.length > 0) {
-          const todayInsight = responseData[0];
-          const recs = todayInsight?.today_recommendations;
-
-          if (Array.isArray(recs)) {
-            setRecommendations(
-              recs.map((rec, index) => ({
-                ...rec,
-                id: index,
-                completed: false,
-              }))
-            );
-          } else {
-            setRecommendations([]);
-          }
         } else {
-          setRecommendations([]);
+          const insightsData = await insightsRes.json();
+          if (!Array.isArray(insightsData)) {
+            console.error("Unexpected AI Insights API response format: Expected an array, but received:", insightsData);
+            setAiInsights([]);
+          } else {
+            setAiInsights(insightsData);
+            if (insightsData.length > 0) {
+              const todayInsight = insightsData[0];
+              const recs = todayInsight?.today_recommendations;
+              if (Array.isArray(recs)) {
+                setRecommendations(
+                  recs.map((rec, index) => ({
+                    ...rec,
+                    id: index,
+                    completed: false,
+                  }))
+                );
+              } else {
+                setRecommendations([]);
+              }
+            } else {
+              setRecommendations([]);
+            }
+          }
+        }
+
+        const journalRes = await fetch(`http://localhost:3000/api/get-journal-entries?userId=${userId}&limit=30`);
+        if (!journalRes.ok) {
+          const text = await journalRes.text();
+          console.error("Journal Entries API response not OK:", journalRes.status, text);
+          setJournalEntries([]);
+        } else {
+          const journalData = await journalRes.json();
+          if (journalData.success && Array.isArray(journalData.entries)) {
+            const sortedJournalEntries = journalData.entries.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            setJournalEntries(sortedJournalEntries);
+          } else {
+            console.error("Unexpected Journal Entries API response format:", journalData);
+            setJournalEntries([]);
+          }
         }
 
       } catch (err) {
-        console.error("Error fetching AI insights:", err);
+        console.error("Error fetching data:", err);
         setAiInsights([]);
+        setJournalEntries([]);
         setRecommendations([]);
       } finally {
         setLoading(false);
@@ -103,14 +126,14 @@ export default function Dashboard({ userId }) {
     };
 
     if (userId) {
-      fetchInsights();
+      fetchData();
     } else {
       setLoading(false);
     }
   }, [userId]);
 
   const todayInsight = aiInsights.length > 0 ? aiInsights[0] : null;
-  
+
   const todaySummaryInsight = useMemo(() => {
     if (todayInsight && typeof todayInsight.insight === 'string') {
       try {
@@ -118,9 +141,9 @@ export default function Dashboard({ userId }) {
           .replace(/```json/g, '')
           .replace(/```/g, '')
           .trim();
-        
+
         const parsedInsight = JSON.parse(jsonString);
-        
+
         if (parsedInsight.weekly_summary?.summary) {
           return parsedInsight.weekly_summary.summary;
         }
@@ -129,58 +152,52 @@ export default function Dashboard({ userId }) {
         }
         return "No detailed insight summary available.";
       } catch (e) {
-        if (todayInsight.insight.includes('weekly_summary') || 
+        if (todayInsight.insight.includes('weekly_summary') ||
             todayInsight.insight.includes('summary')) {
           const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
-          if (summaryMatch) {
+          if (summaryMatch && summaryMatch[1]) {
             return summaryMatch[1];
           }
         }
         console.warn("Failed to parse insight, showing raw content:", todayInsight.insight);
-        return todayInsight.insight; 
+        return todayInsight.insight;
       }
     }
     return "No insight available today.";
   }, [todayInsight]);
-  
+
   const moodData = useMemo(() => {
-  if (
-    !todayInsight ||
-    !Array.isArray(todayInsight.actual_mood) ||
-    !Array.isArray(todayInsight.predicted_mood)
-  )
-    return [];
+    const allDatesMap = {};
 
-  const actualMoods = todayInsight.actual_mood;
-  const predictedMoods = todayInsight.predicted_mood;
+    journalEntries.forEach(entry => {
+      const date = entry.date;
+      const numericMood = colorToNumericMood(entry.mood_rating);
+      if (numericMood !== null) {
+        allDatesMap[date] = {
+          date: date,
+          actualMood: numericMood,
+          predictedMood: null,
+        };
+      }
+    });
 
-  const allDates = {};
-
-  actualMoods.forEach((entry) => {
-    allDates[entry.date] = {
-      date: entry.date,
-      actualMood: entry.mood,
-      predictedMood: null,
-    };
-  });
-
-  predictedMoods.forEach((entry) => {
-    if (allDates[entry.date]) {
-      allDates[entry.date].predictedMood = entry.mood;
-    } else {
-      allDates[entry.date] = {
-        date: entry.date,
-        actualMood: null,
-        predictedMood: entry.mood,
-      };
+    if (todayInsight && Array.isArray(todayInsight.predicted_mood)) {
+      todayInsight.predicted_mood.forEach(entry => {
+        const date = entry.date;
+        if (allDatesMap[date]) {
+          allDatesMap[date].predictedMood = entry.mood;
+        } else {
+          allDatesMap[date] = {
+            date: date,
+            actualMood: null,
+            predictedMood: entry.mood,
+          };
+        }
+      });
     }
-  });
 
-  // Sort by date ascending
-  return Object.values(allDates).sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
-  );
-}, [todayInsight]);
+    return Object.values(allDatesMap).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [journalEntries, todayInsight]);
 
 
   const handleRecommendationClick = (recommendation) => {
@@ -200,13 +217,14 @@ export default function Dashboard({ userId }) {
   const totalCount = recommendations.length;
 
   if (loading) {
-    return <p className="p-8 text-center text-gray-500">Loading insights...</p>;
+    return <p className="p-8 text-center text-gray-500">Loading insights and journal data...</p>;
   }
-  
-  if (!todayInsight && !loading) {
+
+
+  if (!todayInsight && !journalEntries.length && !loading) {
       return (
           <div className="p-8 text-center text-gray-500">
-            <p>No daily insights available for this user yet.</p>
+            <p>No daily insights or journal entries available for this user yet.</p>
             <p>Please ensure journal entries are present and insights are generated.</p>
           </div>
       );
@@ -336,7 +354,7 @@ export default function Dashboard({ userId }) {
                   <XAxis dataKey="date" />
                   <YAxis
                     domain={[0, 5]}
-                    ticks={[1, 2, 3, 4]}
+                    ticks={[1, 2, 3, 4, 5]}
                     tickFormatter={moodFormatter}
                   />
                   <Tooltip
