@@ -20,6 +20,42 @@ export async function OPTIONS() {
   return addCorsHeaders(new NextResponse(null, { status: 200 }));
 }
 
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
+
+  if (!userId) {
+    return addCorsHeaders(
+      NextResponse.json({ success: false, error: "Missing userId" }, { status: 400 })
+    );
+  }
+
+  // Query the latest summary for the user from the weekly_summaries table
+  const { data, error } = await supabaseAdmin
+    .from("weekly_summaries")
+    .select("mood_summary, week_start")
+    .eq("user_id", userId)
+    .order("week_start", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) {
+    return addCorsHeaders(
+      NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    );
+  }
+  if (!data) {
+    return addCorsHeaders(
+      NextResponse.json({ success: false, error: "No weekly summary found." }, { status: 404 })
+    );
+  }
+
+  return addCorsHeaders(
+    NextResponse.json({ success: true, mood_summary: data.mood_summary, week_start: data.week_start })
+  );
+}
+
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();

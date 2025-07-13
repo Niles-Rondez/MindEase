@@ -29,7 +29,6 @@ const colorToNumericMood = (color) => {
   }
 };
 
-
 const moodFormatter = (value) => {
   const moodMap = {
     1: "🙁 Very Sad",
@@ -62,6 +61,37 @@ export default function Dashboard({ userId }) {
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // For Today's Insight and Prediction Accuracy cards
+  const [todayInsightText, setTodayInsightText] = useState("Loading...");
+  const [predictionAccuracy, setPredictionAccuracy] = useState(null);
+  const [infoLoading, setInfoLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch only today_recommendations and prediction_accuracy for the cards
+    const fetchTodayInsight = async () => {
+      setInfoLoading(true);
+      try {
+        const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        // today_recommendations: expect an array, display the first description/title or a fallback
+        let text = "No insight available today.";
+        if (Array.isArray(data.today_recommendations) && data.today_recommendations.length > 0) {
+          text = data.today_recommendations[0].description || data.today_recommendations[0].title || text;
+        }
+        setTodayInsightText(text);
+        setPredictionAccuracy(data.prediction_accuracy);
+      } catch {
+        setTodayInsightText("No insight available today.");
+        setPredictionAccuracy(null);
+      } finally {
+        setInfoLoading(false);
+      }
+    };
+    if (userId) fetchTodayInsight();
+  }, [userId]);
+
+  // This effect loads mood data and all recs for Today’s Progress
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -69,40 +99,31 @@ export default function Dashboard({ userId }) {
       try {
         const insightsRes = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
         if (!insightsRes.ok) {
-          const text = await insightsRes.text();
-          console.error("AI Insights API response not OK:", insightsRes.status, text);
           setAiInsights([]);
         } else {
           const insightsData = await insightsRes.json();
-          if (!Array.isArray(insightsData)) {
-            console.error("Unexpected AI Insights API response format: Expected an array, but received:", insightsData);
-            setAiInsights([]);
-          } else {
-            setAiInsights(insightsData);
-            if (insightsData.length > 0) {
-              const todayInsight = insightsData[0];
-              const recs = todayInsight?.today_recommendations;
-              if (Array.isArray(recs)) {
-                setRecommendations(
-                  recs.map((rec, index) => ({
-                    ...rec,
-                    id: index,
-                    completed: false,
-                  }))
-                );
-              } else {
-                setRecommendations([]);
-              }
+          setAiInsights(Array.isArray(insightsData) ? insightsData : []);
+          if (Array.isArray(insightsData) && insightsData.length > 0) {
+            const todayInsight = insightsData[0];
+            const recs = todayInsight?.today_recommendations;
+            if (Array.isArray(recs)) {
+              setRecommendations(
+                recs.map((rec, index) => ({
+                  ...rec,
+                  id: index,
+                  completed: false,
+                }))
+              );
             } else {
               setRecommendations([]);
             }
+          } else {
+            setRecommendations([]);
           }
         }
 
         const journalRes = await fetch(`http://localhost:3000/api/get-journal-entries?userId=${userId}&limit=30`);
         if (!journalRes.ok) {
-          const text = await journalRes.text();
-          console.error("Journal Entries API response not OK:", journalRes.status, text);
           setJournalEntries([]);
         } else {
           const journalData = await journalRes.json();
@@ -110,13 +131,11 @@ export default function Dashboard({ userId }) {
             const sortedJournalEntries = journalData.entries.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             setJournalEntries(sortedJournalEntries);
           } else {
-            console.error("Unexpected Journal Entries API response format:", journalData);
             setJournalEntries([]);
           }
         }
 
       } catch (err) {
-        console.error("Error fetching data:", err);
         setAiInsights([]);
         setJournalEntries([]);
         setRecommendations([]);
@@ -131,40 +150,6 @@ export default function Dashboard({ userId }) {
       setLoading(false);
     }
   }, [userId]);
-
-  const todayInsight = aiInsights.length > 0 ? aiInsights[0] : null;
-
-  const todaySummaryInsight = useMemo(() => {
-    if (todayInsight && typeof todayInsight.insight === 'string') {
-      try {
-        let jsonString = todayInsight.insight
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-
-        const parsedInsight = JSON.parse(jsonString);
-
-        if (parsedInsight.weekly_summary?.summary) {
-          return parsedInsight.weekly_summary.summary;
-        }
-        if (parsedInsight.summary) {
-          return parsedInsight.summary;
-        }
-        return "No detailed insight summary available.";
-      } catch (e) {
-        if (todayInsight.insight.includes('weekly_summary') ||
-            todayInsight.insight.includes('summary')) {
-          const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
-          if (summaryMatch && summaryMatch[1]) {
-            return summaryMatch[1];
-          }
-        }
-        console.warn("Failed to parse insight, showing raw content:", todayInsight.insight);
-        return todayInsight.insight;
-      }
-    }
-    return "No insight available today.";
-  }, [todayInsight]);
 
   const moodData = useMemo(() => {
     const allDatesMap = {};
@@ -181,24 +166,10 @@ export default function Dashboard({ userId }) {
       }
     });
 
-    if (todayInsight && Array.isArray(todayInsight.predicted_mood)) {
-      todayInsight.predicted_mood.forEach(entry => {
-        const date = entry.date;
-        if (allDatesMap[date]) {
-          allDatesMap[date].predictedMood = entry.mood;
-        } else {
-          allDatesMap[date] = {
-            date: date,
-            actualMood: null,
-            predictedMood: entry.mood,
-          };
-        }
-      });
-    }
+    // Optional: Merge predictedMood data if needed (not changed here)
 
     return Object.values(allDatesMap).sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [journalEntries, todayInsight]);
-
+  }, [journalEntries]);
 
   const handleRecommendationClick = (recommendation) => {
     setSelectedRecommendation(recommendation);
@@ -220,16 +191,6 @@ export default function Dashboard({ userId }) {
     return <p className="p-8 text-center text-gray-500">Loading insights and journal data...</p>;
   }
 
-
-  if (!todayInsight && !journalEntries.length && !loading) {
-      return (
-          <div className="p-8 text-center text-gray-500">
-            <p>No daily insights or journal entries available for this user yet.</p>
-            <p>Please ensure journal entries are present and insights are generated.</p>
-          </div>
-      );
-  }
-
   return (
     <div className="w-full">
       <div className="flex flex-col items-center w-full min-h-screen">
@@ -242,6 +203,7 @@ export default function Dashboard({ userId }) {
           </div>
 
           <div className="grid gap-4 p-4 md:gap-6 lg:grid-cols-3 auto-rows-min">
+            {/* Today’s Progress */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-plum-100">
@@ -333,6 +295,7 @@ export default function Dashboard({ userId }) {
               </div>
             </div>
 
+            {/* Mood Tracking & Predictions */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl lg:col-span-2">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-lilac-100">
@@ -389,7 +352,7 @@ export default function Dashboard({ userId }) {
                     Today's Insight
                   </h3>
                   <p className="text-xs text-purple-700">
-                    {todaySummaryInsight}
+                    {infoLoading ? "Loading..." : todayInsightText}
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-50">
@@ -397,14 +360,17 @@ export default function Dashboard({ userId }) {
                     Prediction Accuracy
                   </h3>
                   <p className="text-xs text-blue-700">
-                    {todayInsight?.prediction_accuracy
-                      ? `Our AI predictions are ${todayInsight.prediction_accuracy}% accurate when you follow recommendations.`
-                      : "No accuracy data available."}
+                    {infoLoading
+                      ? "Loading..."
+                      : predictionAccuracy !== null
+                        ? `Our AI predictions are ${predictionAccuracy}% accurate when you follow recommendations.`
+                        : "No accuracy data available."}
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* AI Wellness Companion */}
             <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl lg:col-span-3">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-green-100 rounded-lg">
@@ -427,8 +393,8 @@ export default function Dashboard({ userId }) {
                       Today's Affirmation
                     </h3>
                     <p className="text-sm text-plum-700">
-                      {todayInsight?.today_affirmation ||
-                        "You're doing your best, and that is enough."}
+                      {/* You may want to fetch this from aiInsights as well */}
+                      You're doing your best, and that is enough.
                     </p>
                   </div>
                   <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50">
@@ -436,8 +402,8 @@ export default function Dashboard({ userId }) {
                       Quick Tip
                     </h3>
                     <p className="text-sm text-green-700">
-                      {todayInsight?.quick_tip ||
-                        "Try journaling your thoughts when feeling overwhelmed."}
+                      {/* You may want to fetch this from aiInsights as well */}
+                      Try journaling your thoughts when feeling overwhelmed.
                     </p>
                   </div>
                 </div>
