@@ -11,12 +11,10 @@ import {
 import RecommendationModal from '../components/RecommendationModal';
 
 const Insights = ({ userId }) => {
-  const [aiInsights, setAiInsights] = useState(null); // single object
+  const [aiInsights, setAiInsights] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
-  const [weeklyTrends, setWeeklyTrends] = useState([]);
   const [loadingAiInsights, setLoadingAiInsights] = useState(true);
   const [loadingJournalEntries, setLoadingJournalEntries] = useState(true);
-  const [loadingWeeklyTrends, setLoadingWeeklyTrends] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,24 +36,29 @@ const Insights = ({ userId }) => {
 
   // --- Fetch AI Insights (for patterns and weekly summary) ---
   useEffect(() => {
-    const fetchAiInsights = async () => {
-      setLoadingAiInsights(true);
-      try {
-        const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        setAiInsights(data); // API returns an object, not array!
-        setWeeklySummary(data.weekly_summary || null);
-      } catch (err) {
-        setAiInsights(null);
-        setWeeklySummary(null);
-      } finally {
-        setLoadingAiInsights(false);
-      }
-    };
-    if (userId) fetchAiInsights();
-    else setLoadingAiInsights(false);
-  }, [userId]);
+  const fetchAiInsights = async () => {
+    setLoadingAiInsights(true);
+    try {
+      const res = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // API returns a single object, not an array!
+      setAiInsights(data); // keep it as object!
+      setWeeklySummary(data.weekly_summary || null);
+    } catch (err) {
+      setAiInsights(null);
+      setWeeklySummary(null);
+    } finally {
+      setLoadingAiInsights(false);
+    }
+  };
+  if (userId) {
+    fetchAiInsights();
+  } else {
+    setLoadingAiInsights(false);
+  }
+}, [userId]);
+
 
   // --- Fetch Journal Entries ---
   useEffect(() => {
@@ -80,37 +83,11 @@ const Insights = ({ userId }) => {
       }
     };
 
-    if (userId) fetchJournalEntries();
-    else setLoadingJournalEntries(false);
-  }, [userId]);
-
-  // --- Fetch Weekly Trends ---
-  useEffect(() => {
-    const fetchWeeklyTrends = async () => {
-      setLoadingWeeklyTrends(true);
-      try {
-        const res = await fetch(`http://localhost:3000/api/weekly-trends?userId=${userId}`);
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Failed to load weekly trends: HTTP", res.status, text);
-          setWeeklyTrends([]);
-          return;
-        }
-        const data = await res.json();
-        if (!data.success || !Array.isArray(data.trends)) {
-          setWeeklyTrends([]);
-          return;
-        }
-        setWeeklyTrends(data.trends);
-      } catch (err) {
-        setWeeklyTrends([]);
-      } finally {
-        setLoadingWeeklyTrends(false);
-      }
-    };
-
-    if (userId) fetchWeeklyTrends();
-    else setLoadingWeeklyTrends(false);
+    if (userId) {
+      fetchJournalEntries();
+    } else {
+      setLoadingJournalEntries(false);
+    }
   }, [userId]);
 
   // --- Fetch Recommendations ---
@@ -200,18 +177,15 @@ const Insights = ({ userId }) => {
     return chartData;
   }, [journalEntries]);
 
-  // Weekly Trend Data (from API)
-  const weeklyTrendData = useMemo(() => {
-    if (!weeklyTrends || weeklyTrends.length === 0) {
-      return [];
-    }
-    return weeklyTrends.map(trend => ({
-      week: trend.week, // e.g., "Week 1", "Week 2", etc.
-      avgMood: trend.avgMood,
-      totalEntries: trend.totalEntries,
-      consistency: trend.consistency || 0 // Add consistency percentage if available
-    }));
-  }, [weeklyTrends]);
+  // Monthly Trend Data (optional: hardcoded)
+  const monthlyTrendData = useMemo(() => {
+    return [
+      { week: 'Week 1', avgMood: 3.5, consistency: 70 },
+      { week: 'Week 2', avgMood: 3.8, consistency: 85 },
+      { week: 'Week 3', avgMood: 3.2, consistency: 60 },
+      { week: 'Week 4', avgMood: 4.1, consistency: 90 },
+    ];
+  }, []);
 
   // Mood Pattern Insights (uses `aiInsights`)
   const insight = aiInsights || {};
@@ -275,12 +249,11 @@ const Insights = ({ userId }) => {
     ];
   }, [insight]);
 
-  // Loading and No Data handling
-  if (loadingAiInsights || loadingJournalEntries || loadingWeeklyTrends) {
+  if (loadingAiInsights || loadingJournalEntries) {
     return <div className="p-10 text-center">Loading insights...</div>;
   }
 
-  if (!aiInsights && journalEntries.length === 0 && weeklyTrends.length === 0) {
+  if (aiInsights.length === 0 && journalEntries.length === 0) {
     return (
       <div className="p-10 text-center text-gray-500">
         <p>No insights or journal entries available yet.</p>
@@ -327,6 +300,7 @@ const Insights = ({ userId }) => {
                 dot={{ fill: '#8b5cf6', r: 5 }}
                 name="Mood"
               />
+              {/* These lines are kept for future extensibility */}
               {weeklyMoodData.some(d => d.energy !== null) && (
                 <Line type="monotone" dataKey="energy" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} name="Energy" />
               )}
@@ -373,36 +347,26 @@ const Insights = ({ userId }) => {
           </div>
         </div>
 
-        {/* Weekly Trends */}
+        {/* Monthly Trends */}
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Trends</h2>
-              <p className="text-sm text-gray-600">Track your progress over the current month's weeks</p>
+              <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Monthly Trends</h2>
+              <p className="text-sm text-gray-600">Track your progress over the past 4 weeks</p>
             </div>
           </div>
-          {weeklyTrendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={weeklyTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="week" />
-                <YAxis />
-                <Tooltip formatter={(value, name) => {
-                  if (name === 'avgMood') return [value.toFixed(1), 'Average Mood'];
-                  if (name === 'totalEntries') return [value, 'Total Entries'];
-                  if (name === 'consistency') return [`${value.toFixed(1)}%`, 'Consistency'];
-                  return [value, name];
-                }} />
-                <Bar dataKey="avgMood" fill="#8b5cf6" name="Average Mood" />
-                <Bar dataKey="totalEntries" fill="#10b981" name="Total Entries" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              <p>No weekly trends data available yet. Create more journal entries to see patterns!</p>
-            </div>
-          )}
+
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="week" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="avgMood" fill="#8b5cf6" name="Average Mood" />
+              <Bar dataKey="consistency" fill="#c084fc" name="Consistency %" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Weekly Recommendations */}
