@@ -20,17 +20,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Fetch weekly_summary, today's recommendations, and prediction accuracy
   const { data, error } = await supabaseAdmin
     .from("ai_insights")
-    .select("weekly_summary, today_recommendations, prediction_accuracy, created_at")
+    .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .limit(7);
 
-  if (error || !data) {
-    return new NextResponse(JSON.stringify({ error: "No AI insight found" }), {
+  if (error || !data || data.length === 0) {
+    return new NextResponse(JSON.stringify({ error: "No AI insights found" }), {
       status: 404,
       headers: {
         "Access-Control-Allow-Origin": origin,
@@ -39,21 +37,13 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return new NextResponse(
-    JSON.stringify({
-      weekly_summary: data.weekly_summary,
-      today_recommendations: data.today_recommendations,
-      prediction_accuracy: data.prediction_accuracy,
-      created_at: data.created_at,
-    }),
-    {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": origin,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  return new NextResponse(JSON.stringify(data), {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": origin,
+      "Content-Type": "application/json",
+    },
+  });
 }
 
 export function OPTIONS() {
