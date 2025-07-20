@@ -105,15 +105,6 @@ All data is securely stored using **Supabase** infrastructure.
 
 ---
 
-# 🚫 Out of Scope for MVP
-- Real-time chatbot therapist
-- Photo-based mood prediction
-- Push notifications
-- Therapist directory or emergency support
-- Community/social features
-
----
-
 ## 👩‍💻 Contributors
 
 | Name       | Role                      |
