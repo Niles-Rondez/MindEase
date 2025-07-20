@@ -29,7 +29,6 @@ const colorToNumericMood = (color) => {
   }
 };
 
-
 const moodFormatter = (value) => {
   const moodMap = {
     1: "🙁 Very Sad",
@@ -39,6 +38,12 @@ const moodFormatter = (value) => {
     5: "😄 Very Happy",
   };
   return moodMap[value] || value;
+};
+
+const formatDayLabel = (dateString) => {
+  const date = new Date(dateString);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return days[date.getDay()];
 };
 
 const getPriorityColor = (priority) => {
@@ -52,6 +57,21 @@ const getPriorityColor = (priority) => {
     default:
       return "bg-gray-50 text-gray-700 border-gray-200";
   }
+};
+
+const getWeekDates = () => {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const dates = [];
+  
+  // Calculate dates for the past week (7 days including today)
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    dates.push(date.toISOString().split('T')[0]);
+  }
+  
+  return dates;
 };
 
 export default function Dashboard({ userId }) {
@@ -167,38 +187,42 @@ export default function Dashboard({ userId }) {
   }, [todayInsight]);
 
   const moodData = useMemo(() => {
+    const weekDates = getWeekDates();
     const allDatesMap = {};
 
+    // Initialize all week dates
+    weekDates.forEach(date => {
+      allDatesMap[date] = {
+        date: date,
+        dayLabel: formatDayLabel(date),
+        actualMood: null,
+        predictedMood: null,
+      };
+    });
+
+    // Add actual mood data for the week
     journalEntries.forEach(entry => {
       const date = entry.date;
-      const numericMood = colorToNumericMood(entry.mood_rating);
-      if (numericMood !== null) {
-        allDatesMap[date] = {
-          date: date,
-          actualMood: numericMood,
-          predictedMood: null,
-        };
+      if (allDatesMap[date]) {
+        const numericMood = colorToNumericMood(entry.mood_rating);
+        if (numericMood !== null) {
+          allDatesMap[date].actualMood = numericMood;
+        }
       }
     });
 
+    // Add predicted mood data for the week
     if (todayInsight && Array.isArray(todayInsight.predicted_mood)) {
       todayInsight.predicted_mood.forEach(entry => {
         const date = entry.date;
         if (allDatesMap[date]) {
           allDatesMap[date].predictedMood = entry.mood;
-        } else {
-          allDatesMap[date] = {
-            date: date,
-            actualMood: null,
-            predictedMood: entry.mood,
-          };
         }
       });
     }
 
     return Object.values(allDatesMap).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [journalEntries, todayInsight]);
-
 
   const handleRecommendationClick = (recommendation) => {
     setSelectedRecommendation(recommendation);
@@ -219,7 +243,6 @@ export default function Dashboard({ userId }) {
   if (loading) {
     return <p className="p-8 text-center text-gray-500">Loading insights and journal data...</p>;
   }
-
 
   if (!todayInsight && !journalEntries.length && !loading) {
       return (
@@ -249,7 +272,7 @@ export default function Dashboard({ userId }) {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-gray-800 md:text-xl">
-                    Today’s Progress
+                    Today's Progress
                   </h2>
                   <p className="text-sm text-gray-600">
                     {completedCount} of {totalCount} completed
@@ -260,7 +283,7 @@ export default function Dashboard({ userId }) {
               <div className="mb-4">
                 <div className="w-full h-2 bg-gray-200 rounded-full">
                   <div
-                    className="h-2 rounded-full bg-plum-600 transition-all"
+                    className="h-2 transition-all rounded-full bg-plum-600"
                     style={{ width: `${(completedCount / totalCount) * 100}%` }}
                   ></div>
                 </div>
@@ -349,19 +372,28 @@ export default function Dashboard({ userId }) {
               </div>
 
               <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={moodData}>
+                <LineChart 
+                  data={moodData}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" />
+                  <XAxis 
+                    dataKey="dayLabel"
+                    tick={{ fontSize: 12 }}
+                  />
                   <YAxis
-                    domain={[0, 5]}
+                    domain={[0.5, 5.5]}
                     ticks={[1, 2, 3, 4, 5]}
                     tickFormatter={moodFormatter}
+                    tick={{ fontSize: 12 }}
+                    width={75}
                   />
                   <Tooltip
                     formatter={(value, name) => [
                       moodFormatter(value),
                       name === "actualMood" ? "Your Mood" : "AI Prediction",
                     ]}
+                    labelFormatter={(label) => `Day: ${label}`}
                   />
                   <Line
                     type="monotone"
@@ -369,6 +401,7 @@ export default function Dashboard({ userId }) {
                     stroke="#8b5cf6"
                     strokeWidth={3}
                     dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 5 }}
+                    connectNulls={true}
                     name="actualMood"
                   />
                   <Line
@@ -378,6 +411,7 @@ export default function Dashboard({ userId }) {
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     dot={{ fill: "#c084fc", strokeWidth: 2, r: 4 }}
+                    connectNulls={true}
                     name="predictedMood"
                   />
                 </LineChart>

@@ -94,7 +94,7 @@ function Navbar({ userId, currentPage, onNavigate, onSignOut }) {
                             <img src={logo} alt="MindEase Logo" className="h-8" />
                             <button 
                                 onClick={() => handleNavigation('dashboard')}
-                                className="text-2xl font-bold text-gray-800 transition-colors duration-200 text-purple hover:text-purple-dark"
+                                className="text-2xl font-bold transition-colors duration-200 text-purple hover:text-purple-dark"
                             >
                                 MindEase
                             </button>
@@ -164,7 +164,7 @@ function Navbar({ userId, currentPage, onNavigate, onSignOut }) {
                                             <div className="">
                                                 <button
                                                     onClick={handleSignOut}
-                                                    className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50"
+                                                    className="block w-full px-4 py-2 text-sm text-left cursor-pointer text-red-60 hover:bg-red-400/20"
                                                 >
                                                     🚪 Sign Out
                                                 </button>
@@ -253,13 +253,13 @@ function Navbar({ userId, currentPage, onNavigate, onSignOut }) {
                                         setIsProfileModalOpen(true);
                                         setIsMenuOpen(false);
                                     }}
-                                    className="block w-full px-3 py-2 text-sm text-left text-gray-700 rounded-md hover:bg-gray-50"
+                                    className="block w-full px-3 py-2 text-sm text-left text-gray-700 rounded-md"
                                 >
                                     👤 Profile Settings
                                 </button>
                                 <button
                                     onClick={handleSignOut}
-                                    className="block w-full px-3 py-2 text-sm text-left text-red-600 rounded-md hover:bg-red-50"
+                                    className="block w-full px-3 py-2 text-sm text-left text-red-600 rounded-md bg-red-500/20"
                                 >
                                     🚪 Sign Out
                                 </button>

@@ -165,15 +165,31 @@ const Insights = ({ userId }) => {
   const insight = aiInsights[0] || {};
   console.log("Current main AI insight object:", insight);
 
-  const moodFormatter = (value) => {
-    const map = {
-      1: '😢 Very Sad',
-      2: '😕 Sad',
-      3: '😐 Neutral',
-      4: '😊 Happy',
-      5: '😄 Very Happy'
-    };
-    return map[value] || value;
+const moodFormatter = (value) => {
+  const moodMap = {
+    1: "🙁 Very Sad",
+    2: "😕 Sad",
+    3: "😐 Neutral",
+    4: "😊 Happy",
+    5: "😄 Very Happy",
+  };
+  return moodMap[value] || value;
+};
+
+  const formatXAxisLabel = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays === 0) return 'Today';
+    if (diffDays <= 7) return `${diffDays} days ago`;
+    if (diffDays <= 14) return '2 weeks ago';
+    if (diffDays <= 21) return '3 weeks ago';
+    
+    // For older dates, show month and day
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const getImpactColor = (impact) => {
@@ -315,12 +331,12 @@ const Insights = ({ userId }) => {
   }, [insight]);
 
   if (loadingAiInsights || loadingJournalEntries || loadingWeeklyTrends) {
-    return <div className="p-10 text-center">Loading insights...</div>;
+    return <div className="p-4 text-center sm:p-10">Loading insights...</div>;
   }
 
   if (aiInsights.length === 0 && journalEntries.length === 0 && weeklyTrends.length === 0) {
     return (
-      <div className="p-10 text-center text-gray-500">
+      <div className="p-4 text-center text-gray-500 sm:p-10">
         <p>No insights or journal entries available yet.</p>
         <p>Please ensure you have journal entries and AI insights are being generated.</p>
       </div>
@@ -329,25 +345,35 @@ const Insights = ({ userId }) => {
 
   return (
     <div className="w-full">
-      <div className="p-5 lg:px-10 lg:py-5">
-        <h1 className="text-2xl font-bold">🔍 Insights</h1>
-        <p className="text-md text-black/50">Discover weekly patterns and get data-driven recommendations for your mental wellness journey.</p>
+      <div className="p-4 sm:p-5 lg:px-10 lg:py-5">
+        <h1 className="text-xl font-bold sm:text-2xl">🔍 Insights</h1>
+        <p className="text-sm text-black/50 sm:text-md">Discover weekly patterns and get data-driven recommendations for your mental wellness journey.</p>
       </div>
 
       <div className="grid gap-4 p-4 md:gap-6 lg:grid-cols-3 auto-rows-min">
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-plum-100"><Calendar className="w-5 h-5 text-plum-600" /></div>
+            <div className="p-2 rounded-lg bg-plum-100"><Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-plum-600" /></div>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Mood Patterns</h2>
-              <p className="text-sm text-gray-600">Track your mood levels over time</p>
+              <p className="text-xs text-gray-600 sm:text-sm">Track your mood levels over time</p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={weeklyMoodData}>
+            <LineChart data={weeklyMoodData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 5]} ticks={[1, 2, 3, 4, 5]} tickFormatter={moodFormatter} />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={formatXAxisLabel}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis 
+                domain={[0.5, 5.5]} 
+                ticks={[1, 2, 3, 4, 5]} 
+                tickFormatter={moodFormatter}
+                tick={{ fontSize: 12 }}
+                width={75}
+              />
               <Tooltip formatter={(value, name) => {
                 if (name === 'mood') return [moodFormatter(value), 'Mood'];
                 if (name === 'energy') return [value !== null ? value.toFixed(1) : 'N/A', 'Energy'];
@@ -386,20 +412,20 @@ const Insights = ({ userId }) => {
 
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-lilac-100"><Brain className="w-5 h-5 text-lilac-600" /></div>
+            <div className="p-2 rounded-lg bg-lilac-100"><Brain className="w-4 h-4 sm:w-5 sm:h-5 text-lilac-600" /></div>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Key Patterns</h2>
-              <p className="text-sm text-gray-600">AI-detected insights</p>
+              <p className="text-xs text-gray-600 sm:text-sm">AI-detected insights</p>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="pr-2 space-y-3 overflow-y-auto h-80">
             {moodPatternInsights.map((item, index) => (
-              <div key={index} className={`p-3 border rounded-lg ${item.color}`}>
+              <div key={index} className={`p-3 border-black/20 rounded-lg ${item.color}`}>
                 <div className="flex items-start gap-2">
-                  <Lightbulb className={`w-4 h-4 ${item.textColor}`} />
-                  <div className="flex-1">
+                  <Lightbulb className={`w-4 h-4 mt-0.5 flex-shrink-0 ${item.textColor}`} />
+                  <div className="flex-1 min-w-0">
                     <h3 className={`text-sm font-semibold ${item.textColor}`}>{item.title}</h3>
-                    <p className={`text-xs mt-1 ${item.textColor}`}>{item.description}</p>
+                    <p className={`text-xs mt-1 ${item.textColor} break-words`}>{item.description}</p>
                   </div>
                 </div>
               </div>
@@ -409,18 +435,18 @@ const Insights = ({ userId }) => {
 
         <div className="col-span-1 p-4 bg-white shadow lg:col-span-2 md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
+            <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-4 h-4 text-green-600 sm:w-5 sm:h-5" /></div>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Trends</h2>
-              <p className="text-sm text-gray-600">Track your progress over the current month's weeks</p>
+              <p className="text-xs text-gray-600 sm:text-sm">Track your progress over the current month's weeks</p>
             </div>
           </div>
           {weeklyTrendData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={weeklyTrendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="week" />
-                <YAxis />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value, name) => {
                   if (name === 'avgMood') return [value.toFixed(1), 'Average Mood'];
                   if (name === 'totalEntries') return [value, 'Total Entries'];
@@ -433,17 +459,17 @@ const Insights = ({ userId }) => {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-64 text-gray-500">
-              <p>No weekly trends data available yet. Create more journal entries to see patterns!</p>
+              <p className="text-sm text-center">No weekly trends data available yet. Create more journal entries to see patterns!</p>
             </div>
           )}
         </div>
 
         <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-yellow-100 rounded-lg"><Target className="w-5 h-5 text-yellow-600" /></div>
+            <div className="p-2 bg-yellow-100 rounded-lg"><Target className="w-4 h-4 text-yellow-600 sm:w-5 sm:h-5" /></div>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Strategies</h2>
-              <p className="text-sm text-gray-600">Based on your patterns</p>
+              <p className="text-xs text-gray-600 sm:text-sm">Based on your patterns</p>
             </div>
           </div>
           <div className="space-y-4">
@@ -454,17 +480,17 @@ const Insights = ({ userId }) => {
                 onClick={() => handleRecommendationClick(rec)}
               >
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-plum-100">
-                    {rec.icon || <Clock className="w-5 h-5 text-plum-600" />}
+                  <div className="flex-shrink-0 p-2 rounded-lg bg-plum-100">
+                    {rec.icon || <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-plum-600" />}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-gray-800">{rec.title}</h3>
                     <p className="mb-2 text-xs text-gray-600">{rec.description}</p>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex flex-wrap gap-2 mb-2">
                       <span className="px-2 py-1 text-xs rounded text-plum-700 bg-plum-100">{rec.category}</span>
                       <span className={`text-xs px-2 py-1 rounded ${getImpactColor(rec.impact)}`}>{rec.impact} Impact</span>
                     </div>
-                    <p className="text-xs italic text-gray-500">Based on: {rec.basedOn}</p>
+                    <p className="text-xs italic text-gray-500 break-words">Based on: {rec.basedOn}</p>
                   </div>
                 </div>
               </div>

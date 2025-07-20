@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Filter, Calendar, Heart, Loader2 } from 'lucide-react';
 
 const LogbookModal = ({ isOpen, onClose, entry }) => {
@@ -88,6 +88,7 @@ const Logbook = ({ userId }) => {
   
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(''); // NEW: Debounced search term
   const [moodFilter, setMoodFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
   
@@ -97,8 +98,31 @@ const Logbook = ({ userId }) => {
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
 
+  // NEW: Ref for the debounce timeout
+  const debounceTimeout = useRef(null);
+
   // Options for mood filter dropdown
   const moodOptions = ['All', 'Very Happy', 'Happy', 'Neutral', 'Sad', 'Very Sad'];
+
+  // NEW: Debounce effect for search term
+  useEffect(() => {
+    // Clear the previous timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    // Set a new timeout
+    debounceTimeout.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Wait 500ms after user stops typing
+
+    // Cleanup function to clear timeout if component unmounts or searchTerm changes
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, [searchTerm]);
 
   // Main function to get entries from API
   const fetchEntries = async (reset = false) => {
@@ -122,8 +146,9 @@ const Logbook = ({ userId }) => {
         }
       }
 
-      if (searchTerm.trim()) {
-        params.append('search', searchTerm.trim());
+      // UPDATED: Use debounced search term instead of immediate search term
+      if (debouncedSearchTerm.trim()) {
+        params.append('search', debouncedSearchTerm.trim());
       }
 
       // Add date filters
@@ -202,12 +227,12 @@ const Logbook = ({ userId }) => {
     return ranges[filter] || {};
   };
 
-  // Get entries when component loads or filters change
+  // UPDATED: Get entries when component loads or filters change (now uses debouncedSearchTerm)
   useEffect(() => {
     if (userId) {
       fetchEntries(true);
     }
-  }, [userId, moodFilter, dateFilter, searchTerm]);
+  }, [userId, moodFilter, dateFilter, debouncedSearchTerm]);
 
   // Open modal with selected entry
   const openModal = (entry) => {
@@ -259,7 +284,7 @@ const Logbook = ({ userId }) => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-500" />
+          <Loader2 className="w-8 h-8 mx-auto mb-4 text-purple-500 animate-spin" />
           <p className="text-gray-600">Loading your journal entries...</p>
         </div>
       </div>
@@ -276,7 +301,7 @@ const Logbook = ({ userId }) => {
           <p className="mb-4 text-gray-500">{error}</p>
           <button
             onClick={() => fetchEntries(true)}
-            className="px-4 py-2 text-white bg-purple-500 rounded-lg hover:bg-purple-600 transition-colors"
+            className="px-4 py-2 text-white transition-colors bg-purple-500 rounded-lg hover:bg-purple-600"
           >
             Try Again
           </button>
@@ -295,53 +320,62 @@ const Logbook = ({ userId }) => {
             <p className="text-md text-black/50">Review your mental wellness journey through your journal entries.</p>
           </div>
 
-          {/* Filter Section */}
-          <div className="p-4 lg:px-10">
-            <div className="p-4 mb-6 bg-white shadow rounded-xl">
-              <div className="flex flex-col gap-4 lg:flex-row">
-                {/* Search Bar */}
-                <div className="relative flex-1">
-                  <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search journal entries..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Mood Filter */}
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-gray-400" />
-                  <select
-                    value={moodFilter}
-                    onChange={(e) => setMoodFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-                  >
-                    {moodOptions.map(mood => (
-                      <option key={mood} value={mood}>{mood}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Date Filter */}
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-                  >
-                    <option value="All">All Time</option>
-                    <option value="This Week">This Week</option>
-                    <option value="This Month">This Month</option>
-                    <option value="Last 3 Months">Last 3 Months</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+{/* Filter Section */}
+<div className="p-4 lg:px-10">
+  <div className="p-4 mb-6 bg-white shadow rounded-xl">
+    <div className="flex flex-col gap-4 lg:flex-row">
+      {/* Search Bar */}
+      <div className="relative flex-1">
+        <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+        <input
+          type="text"
+          placeholder="Search journal entries..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+        />
+        {/* Show a subtle indicator when search is being debounced */}
+        {searchTerm !== debouncedSearchTerm && (
+          <div className="absolute transform -translate-y-1/2 right-3 top-1/2">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
           </div>
+        )}
+      </div>
+
+      {/* Filter Row - Horizontal on mobile, continues horizontal on desktop */}
+      <div className="flex gap-4 lg:gap-2">
+        {/* Mood Filter */}
+        <div className="flex items-center flex-1 gap-2 lg:flex-initial">
+          <Heart className="w-4 h-4 text-gray-400" />
+          <select
+            value={moodFilter}
+            onChange={(e) => setMoodFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg lg:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+          >
+            {moodOptions.map(mood => (
+              <option key={mood} value={mood}>{mood}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date Filter */}
+        <div className="flex items-center flex-1 gap-2 lg:flex-initial">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg lg:w-auto focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+          >
+            <option value="All">All Time</option>
+            <option value="This Week">This Week</option>
+            <option value="This Month">This Month</option>
+            <option value="Last 3 Months">Last 3 Months</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
           {/* Monthly Log Squares */}
           <div className="p-4 lg:px-10">
