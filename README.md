@@ -36,6 +36,35 @@ The MVP will focus strictly on essential features: user authentication, journal 
   - Date range
 
 ### ⚙️ Settings
-- (Planned for future expansion)
 
 ---
+
+## 💡 How It Works
+
+- Users record daily journals and mood logs.
+- **AI model** (TensorFlow via API) analyzes sentiment (positive, neutral, negative).
+- The system maps mood trends with **survey results** to generate tailored **CBT/meditation suggestions**.
+- Everything is stored and secured in **Supabase** (auth, storage, database).
+
+---
+
+## 🧰 Tech Stack
+
+| Layer       | Tech/Tool                     | Purpose                                      |
+|-------------|-------------------------------|----------------------------------------------|
+| Frontend    | React + Tailwind CSS          | UI/UX, mood/journal input forms              |
+| Backend     | Java Spring Boot              | API for handling logs, onboarding, etc.      |
+| Database    | Supabase (PostgreSQL)         | Store user profiles, journal entries         |
+| Auth        | Supabase Auth                 | Secure login/session management              |
+| AI/ML       | Python + TensorFlow (API)     | Sentiment analysis of journal entries        |
+| Cloud       | AWS EC2 / Supabase Edge       | Backend & AI API hosting                     |
+| Storage     | Supabase Storage              | Store uploaded journal images                |
+
+---
+
+## 🚀 Installation Guide (Dev Mode)
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/mindease.git
+   cd mindease
