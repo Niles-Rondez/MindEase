@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   ThumbsUp, ThumbsDown, TrendingUp, Calendar, Brain,
-  Target, BookOpen, Coffee, Music, Heart, Clock, Lightbulb
+  Target, BookOpen, Coffee, Music, Heart, Clock, Lightbulb, Zap, CheckCircle
 } from 'lucide-react';
 import RecommendationModal from '../components/RecommendationModal';
 
@@ -160,6 +160,16 @@ const calculateStressFromMood = (mood) => {
           return;
         }
         setAiInsights(data);
+        if (data.length > 0 && Array.isArray(data[0].today_recommendations)) {
+        const recsWithState = data[0].today_recommendations.map((rec, idx) => ({
+          ...rec,
+          id: idx,
+          completed: false,
+        }));
+        setRecommendations(recsWithState);
+      } else {
+        setRecommendations([]);
+      }
       } catch (err) {
         console.error("Error fetching AI insights:", err);
         setAiInsights([]);
@@ -242,44 +252,6 @@ const calculateStressFromMood = (mood) => {
       setLoadingWeeklyTrends(false);
     }
   }, [userId]);
-
-  useEffect(() => {
-  const fetchRecommendations = async () => {
-    try {
-      const res = await fetch(`http://localhost:3000/api/recommendations?userId=${userId}`);
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Failed to load recommendations: HTTP", res.status, text);
-        setRecommendations([]);
-        return;
-      }
-      const data = await res.json();
-      console.log("Fetched Recommendations Data:", data);
-      if (!Array.isArray(data)) {
-        console.error("Recommendations API returned non-array data:", data);
-        setRecommendations([]);
-        return;
-      }
-      
-      // Add completed property and set counts
-      const recsWithCompleted = data.map((rec, index) => ({
-        ...rec,
-        id: rec.id || index,
-        completed: false,
-      }));
-      
-      setRecommendations(recsWithCompleted);
-      setCompletedCount(0);
-      setTotalCount(recsWithCompleted.length);
-      
-    } catch (err) {
-      console.error("Error loading recommendations:", err);
-      setRecommendations([]);
-    }
-  };
-
-  if (userId) fetchRecommendations();
-}, [userId]);
 
   const insight = aiInsights[0] || {};
   console.log("Current main AI insight object:", insight);
@@ -663,15 +635,17 @@ const calculateStressFromMood = (mood) => {
           )}
         </div>
 
-        {/* Weekly Strategies */}
+{/* Weekly Strategies (styled like “Today’s Progress”) */}
 <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
   <div className="flex items-center gap-3 mb-4">
-    <div className="p-2 bg-orange-100 rounded-lg">
-      <Target className="w-4 h-4 text-orange-600 sm:w-5 sm:h-5" />
+    <div className="p-2 rounded-lg bg-orange-100">
+      <Zap className="w-5 h-5 text-orange-600" />
     </div>
     <div>
-      <h2 className="text-lg font-semibold text-gray-800 md:text-xl">Weekly Strategies</h2>
-      <p className="text-xs text-gray-600 sm:text-sm">
+      <h2 className="text-lg font-semibold text-gray-800 md:text-xl">
+        Weekly Strategies
+      </h2>
+      <p className="text-sm text-gray-600">
         {completedCount} of {totalCount} completed
       </p>
     </div>
@@ -680,21 +654,21 @@ const calculateStressFromMood = (mood) => {
   <div className="mb-4">
     <div className="w-full h-2 bg-gray-200 rounded-full">
       <div
-        className="h-2 transition-all bg-orange-600 rounded-full"
+        className="h-2 transition-all rounded-full bg-orange-600"
         style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-      ></div>
+      />
     </div>
   </div>
 
-  <div className="pr-2 space-y-3 overflow-y-auto max-h-96">
+  <div className="space-y-3">
     {recommendations.length > 0 ? (
       recommendations.map((rec) => (
         <div
           key={rec.id}
           className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
             rec.completed
-              ? "bg-green-50 border-green-200"
-              : "bg-white border-gray-200 hover:border-orange-300"
+              ? 'bg-green-50 border-green-200'
+              : 'bg-white border-gray-200 hover:border-orange-300'
           }`}
           onClick={() => handleRecommendationClick(rec)}
         >
@@ -707,38 +681,28 @@ const calculateStressFromMood = (mood) => {
                 }}
                 className={`mt-1 p-1 rounded-full transition-colors ${
                   rec.completed
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-200 text-gray-400 hover:bg-gray-300"
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
                 }`}
               >
                 <CheckCircle className="w-4 h-4" />
               </button>
               <div className="flex-1">
-                <h3
-                  className={`text-sm font-semibold ${
-                    rec.completed
-                      ? "line-through text-gray-500"
-                      : "text-gray-800"
-                  }`}
-                >
+                <h3 className={`text-sm font-semibold ${
+                  rec.completed ? 'line-through text-gray-500' : 'text-gray-800'
+                }`}>
                   {rec.title}
                 </h3>
-                <p
-                  className={`text-xs mt-1 ${
-                    rec.completed ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
+                <p className={`text-xs mt-1 ${
+                  rec.completed ? 'text-gray-400' : 'text-gray-600'
+                }`}>
                   {rec.description}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <span className="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded">
+                  <span className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700">
                     {rec.type}
                   </span>
-                  <span
-                    className={`text-xs px-2 py-1 rounded border ${getPriorityColor(
-                      rec.priority
-                    )}`}
-                  >
+                  <span className={`px-2 py-1 text-xs rounded border ${getPriorityColor(rec.priority)}`}>
                     {rec.priority}
                   </span>
                 </div>
@@ -752,12 +716,11 @@ const calculateStressFromMood = (mood) => {
         </div>
       ))
     ) : (
-      <div className="flex items-center justify-center h-32 text-gray-500">
-        <p className="text-sm text-center">No recommendations available yet.</p>
-      </div>
+      <p className="text-center text-gray-500">No strategies available yet.</p>
     )}
   </div>
 </div>
+
 
       <RecommendationModal
         isOpen={isModalOpen}
