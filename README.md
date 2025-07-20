@@ -10,8 +10,8 @@ The MVP focuses strictly on essential features: user authentication, journal and
 
 ### 🔐 Sign Up & Onboarding
 - Multi-step sign-up process:
-  - **Step 1: Personal Info** – name, age, sex, gender
-  - **Step 2: Lifestyle & Interests** – activity level, hobbies
+  - **Step 1: Personal Info** – name, birthdate, sex, gender
+  - **Step 2: Lifestyle & Interests** – hobbies, activity level 
 - Data stored in user profile via **Supabase Auth**
 
 ### ➕ Create Entry
@@ -36,7 +36,6 @@ The MVP focuses strictly on essential features: user authentication, journal and
 - **Filters**: by keyword, mood rating, or date range
 
 ### ⚙️ Settings
-- (Reserved for future expansion)
 
 ---
 
