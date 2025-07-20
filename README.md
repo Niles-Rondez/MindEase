@@ -118,8 +118,8 @@ All data is securely stored using **Supabase** infrastructure.
 
 | Name       | Role                      |
 |------------|---------------------------|
-| Ruelan     | Frontend Lead             |
-| Rondez     | Backend/API Lead          |
+| Rondez     | Frontend Lead             |
+| Ruelan     | Backend/API Lead          |
 | Estiola    | AI/ML Developer           |
 | Montebon   | Database & Cloud Engineer |
 | Ando       | QA & Integration Engineer |
