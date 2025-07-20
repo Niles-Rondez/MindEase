@@ -22,6 +22,19 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isEditing, setIsEditing] = useState(false);
 
+  // Get date limits for validation
+  const getDateLimits = () => {
+    const today = new Date();
+    const maxDate = today.toISOString().split('T')[0]; // Today's date
+    
+    // Set minimum date to 120 years ago (reasonable human lifespan)
+    const minDate = new Date();
+    minDate.setFullYear(today.getFullYear() - 120);
+    const minDateString = minDate.toISOString().split('T')[0];
+    
+    return { minDate: minDateString, maxDate };
+  };
+
   // Load user data when modal opens
   useEffect(() => {
     if (isOpen && userId) {
@@ -64,8 +77,35 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
     }
   };
 
+  const validateBirthdate = (birthdate) => {
+    if (!birthdate) return true; // Allow empty birthdate
+    
+    const { minDate, maxDate } = getDateLimits();
+    const selectedDate = new Date(birthdate);
+    const minDateObj = new Date(minDate);
+    const maxDateObj = new Date(maxDate);
+    
+    if (selectedDate > maxDateObj) {
+      setMessage({ type: 'error', text: 'Birth date cannot be in the future' });
+      return false;
+    }
+    
+    if (selectedDate < minDateObj) {
+      setMessage({ type: 'error', text: 'Please enter a valid birth date' });
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
+    
+    // Validate birthdate before submitting
+    if (!validateBirthdate(userProfile.birthdate)) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await fetch(`http://localhost:3000/api/profiles`, {
@@ -115,6 +155,11 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
 
   const handleInputChange = (field, value) => {
     setUserProfile(prev => ({ ...prev, [field]: value }));
+    
+    // Clear any existing error messages when user starts typing
+    if (message.type === 'error' && field === 'birthdate') {
+      setMessage({ type: '', text: '' });
+    }
   };
 
   const handlePreferenceChange = (field, value) => {
@@ -129,6 +174,8 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
   };
 
   if (!isOpen) return null;
+
+  const { minDate, maxDate } = getDateLimits();
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-2 bg-black/50 sm:items-center sm:p-4">
@@ -255,7 +302,7 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
                         type="email"
                         value={userProfile.email}
                         disabled={true}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg cursor-not-allowed bg-gray-50"
                       />
                       <p className="mt-1 text-xs text-gray-500">Email cannot be changed from this interface</p>
                     </div>
@@ -269,8 +316,13 @@ const ProfileModal = ({ isOpen, onClose, userId }) => {
                         value={userProfile.birthdate}
                         onChange={(e) => handleInputChange('birthdate', e.target.value)}
                         disabled={!isEditing}
+                        min={minDate}
+                        max={maxDate}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple disabled:bg-gray-50"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Please enter a valid birth date (not in the future)
+                      </p>
                     </div>
 
                     <div>
