@@ -69,4 +69,19 @@ The MVP will focus strictly on essential features: user authentication, journal 
    git clone https://github.com/Niles-Rondez/MindEase.git
    cd mindease
    
-2.
+2. **Frontend:**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   
+3. **Backend:**
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+5. **AI Service:**
+   ```bash
+   cd backend
+   cd scripts
+   pip install -r requirements.txt
