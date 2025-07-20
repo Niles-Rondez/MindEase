@@ -30,9 +30,9 @@ function PersonalInfo({ userId, onContinue, onSkip }){
         setError('');
 
         try {
-            // Format the birthdate as YYYY-MM-DD
+            // Format the birthdate as DD-MM-YYYY
             const birthdate = year && month && day ? 
-                `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : null;
+                `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}` : null;
 
             const personalData = {
                 userId: userId,
