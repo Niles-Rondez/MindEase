@@ -90,9 +90,9 @@ All data is securely stored using **Supabase** infrastructure.
    ```bash
    cd backend
    touch .env.local
-
-  Inside .env.local
-  ```bash
+   ```
+   Inside .env.local
+   ```bash
    NEXT_PUBLIC_SUPABASE_URL=https://vueayjtgnwoxzkbnkxdx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1ZWF5anRnbndveHprYm5reGR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3Njg0MTAsImV4cCI6MjA2NjM0NDQxMH0.qjqzNIkfpTp6JyRd60C7sEoLzz0Kw6t8Te1j8kGr0VE
    SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1ZWF5anRnbndveHprYm5reGR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDc2ODQxMCwiZXhwIjoyMDY2MzQ0NDEwfQ.X0gOmstcLhDYNhhLaX58VLIRM2tnaKJ_T-Y2_n0Qz38
