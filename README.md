@@ -117,5 +117,5 @@ All data is securely stored using **Supabase** infrastructure.
 
 ---
 
-# 📄 License
+## 📄 License
 This project is for educational and academic demonstration purposes only.
