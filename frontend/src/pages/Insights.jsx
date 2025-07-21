@@ -268,20 +268,29 @@ const calculateStressFromMood = (mood) => {
   };
 
   const formatXAxisLabel = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays === 0) return 'Today';
-    if (diffDays <= 7) return `${diffDays} days ago`;
-    if (diffDays <= 14) return '2 weeks ago';
-    if (diffDays <= 21) return '3 weeks ago';
-    
-    // For weekly view, show day names
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
-  };
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Set both dates to midnight to compare just the date part
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const diffTime = dateOnly - nowOnly; // Don't use Math.abs to preserve sign
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Today';
+  if (diffDays === -1) return 'Yesterday';
+  if (diffDays === 1) return 'Tomorrow';
+  if (diffDays === 2) return '2 days later';
+  if (diffDays > 2) return `${diffDays} days later`;
+  if (diffDays === -2) return '2 days ago';
+  if (diffDays < -2 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
+  if (diffDays <= -7 && diffDays >= -14) return '2 weeks ago';
+  if (diffDays <= -14 && diffDays >= -21) return '3 weeks ago';
+  
+  // For weekly view, show day names for very old or future dates
+  return date.toLocaleDateString('en-US', { weekday: 'short' });
+};;
 
   const getImpactColor = (impact) => {
     switch (impact) {
@@ -638,7 +647,7 @@ const calculateStressFromMood = (mood) => {
 {/* Weekly Strategies (styled like “Today’s Progress”) */}
 <div className="col-span-1 p-4 bg-white shadow md:p-6 rounded-xl">
   <div className="flex items-center gap-3 mb-4">
-    <div className="p-2 rounded-lg bg-orange-100">
+    <div className="p-2 bg-orange-100 rounded-lg">
       <Zap className="w-5 h-5 text-orange-600" />
     </div>
     <div>
@@ -654,7 +663,7 @@ const calculateStressFromMood = (mood) => {
   <div className="mb-4">
     <div className="w-full h-2 bg-gray-200 rounded-full">
       <div
-        className="h-2 transition-all rounded-full bg-orange-600"
+        className="h-2 transition-all bg-orange-600 rounded-full"
         style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
       />
     </div>
@@ -699,7 +708,7 @@ const calculateStressFromMood = (mood) => {
                   {rec.description}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <span className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700">
+                  <span className="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded">
                     {rec.type}
                   </span>
                   <span className={`px-2 py-1 text-xs rounded border ${getPriorityColor(rec.priority)}`}>
