@@ -1,5 +1,7 @@
 "use client";
+
 import React, { useState, useEffect, useMemo } from "react";
+
 import {
   LineChart,
   Line,
@@ -9,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
 import {
   Calendar,
   TrendingUp,
@@ -16,6 +19,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+
 import RecommendationModal from "../components/RecommendationModal";
 
 const colorToNumericMood = (color) => {
@@ -63,14 +67,14 @@ const getWeekDates = () => {
   const today = new Date();
   const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
   const dates = [];
-  
+
   // Calculate dates for the past week (7 days including today)
   for (let i = 6; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(today.getDate() - i);
     dates.push(date.toISOString().split('T')[0]);
   }
-  
+
   return dates;
 };
 
@@ -81,12 +85,23 @@ export default function Dashboard({ userId }) {
   const [recommendations, setRecommendations] = useState([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userFirstName, setUserFirstName] = useState(""); // New state for first name
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-
       try {
+        // Fetch user profile data first to get the first name
+        const profileRes = await fetch(`http://localhost:3000/api/profiles?userId=${userId}`);
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          if (profileData.success && profileData.first_name) {
+            setUserFirstName(profileData.first_name);
+          }
+        } else {
+          console.error("Profile API response not OK:", profileRes.status);
+        }
+
         const insightsRes = await fetch(`http://localhost:3000/api/ai-insights?userId=${userId}`);
         if (!insightsRes.ok) {
           const text = await insightsRes.text();
@@ -173,7 +188,7 @@ export default function Dashboard({ userId }) {
         return "No detailed insight summary available.";
       } catch (e) {
         if (todayInsight.insight.includes('weekly_summary') ||
-            todayInsight.insight.includes('summary')) {
+          todayInsight.insight.includes('summary')) {
           const summaryMatch = todayInsight.insight.match(/"summary":\s*"([^"]+)"/);
           if (summaryMatch && summaryMatch[1]) {
             return summaryMatch[1];
@@ -245,12 +260,12 @@ export default function Dashboard({ userId }) {
   }
 
   if (!todayInsight && !journalEntries.length && !loading) {
-      return (
-          <div className="p-8 text-center text-gray-500">
-            <p>No daily insights or journal entries available for this user yet.</p>
-            <p>Please ensure journal entries are present and insights are generated.</p>
-          </div>
-      );
+    return (
+      <div className="p-8 text-center text-gray-500">
+        <p>No daily insights or journal entries available for this user yet.</p>
+        <p>Please ensure journal entries are present and insights are generated.</p>
+      </div>
+    );
   }
 
   return (
@@ -258,7 +273,9 @@ export default function Dashboard({ userId }) {
       <div className="flex flex-col items-center w-full min-h-screen">
         <div className="w-full mx-auto max-w-7xl">
           <div className="p-5 lg:px-10 lg:py-5">
-            <h1 className="text-2xl font-bold">👋 Welcome back, User</h1>
+            <h1 className="text-2xl font-bold">
+              👋 Welcome back, {userFirstName || "User"}
+            </h1>
             <p className="text-md text-black/50">
               Here's your daily wellness snapshot and personalized recommendations.
             </p>
@@ -372,12 +389,12 @@ export default function Dashboard({ userId }) {
               </div>
 
               <ResponsiveContainer width="100%" height={350}>
-                <LineChart 
+                <LineChart
                   data={moodData}
                   margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
+                  <XAxis
                     dataKey="dayLabel"
                     tick={{ fontSize: 12 }}
                   />
@@ -465,6 +482,7 @@ export default function Dashboard({ userId }) {
                         "You're doing your best, and that is enough."}
                     </p>
                   </div>
+
                   <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50">
                     <h3 className="mb-2 text-sm font-semibold text-green-800">
                       Quick Tip
